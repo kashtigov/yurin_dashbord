@@ -13,11 +13,12 @@ let currentUserName='';
 let lastMeta='';
 
 // ====== Загрузка и сохранение состояния ======
+let lastDeniedReason='';
 async function load(){
   try{
     const res=await fetch(withToken(STORAGE_URL),{method:'GET'});
     const text=await res.text();
-    if(text==='DENIED') return 'denied';
+    if(text.startsWith('DENIED')){ lastDeniedReason=text.slice(text.indexOf(':')+1)||'неизвестна'; return 'denied'; }
     let env; try{ env=JSON.parse(text); }catch(e){ env={state:text,meta:''}; }
     if(env.state&&String(env.state).trim()) S=Object.assign(defaultState(),JSON.parse(env.state));
     lastMeta=env.meta||'';
@@ -33,7 +34,7 @@ function save(){
     try{
       const res=await fetch(withToken(STORAGE_URL),{method:'POST',body:blob});
       const txt=await res.text();
-      if(txt==='DENIED'){ setStatus("сессия истекла или нет доступа — войди снова",false); clearToken(); return; }
+      if(txt.startsWith('DENIED')){ setStatus("отказ сервера: "+(txt.slice(txt.indexOf(':')+1)||'?'),false); clearToken(); return; }
       if(txt==='INVALID_JSON'||txt==='INVALID_SHAPE'){ setStatus("сервер отклонил данные — напиши разработчику",false); return; }
       setStatus("сохранено для команды ✓ · "+currentUserName,true);
     }catch(e){ console.error('Не удалось сохранить:',e); setStatus("ошибка сохранения — проверь интернет",false); }
@@ -55,7 +56,7 @@ async function gateAndBoot(){
       return true;
     }
     errEl.style.display='block';
-    errEl.textContent=status==='denied'?'Этой почты нет в списке доступа':'Нет связи с сервером — проверь интернет';
+    errEl.textContent=status==='denied'?('Отказ сервера: '+lastDeniedReason):'Нет связи с сервером — проверь интернет';
     clearToken();
     return false;
   }
