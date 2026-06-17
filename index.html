@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Запуск 6 · Акробатика — командный дашборд</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+</head>
+<body>
+<div id="passOverlay" style="display:none;position:fixed;inset:0;background:var(--ink);z-index:100;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;max-width:320px;width:100%">
+    <div style="font-family:'Space Grotesk',Inter,sans-serif;font-weight:600;font-size:17px;margin-bottom:6px;color:var(--txt)">Доступ к дашборду</div>
+    <div style="font-size:13px;color:var(--mut);margin-bottom:14px">Войди через Google-аккаунт команды</div>
+    <div id="googleBtn" style="display:flex;justify-content:center;margin-bottom:6px"></div>
+    <div id="passError" style="display:none;color:var(--bad);font-size:12px;margin-top:10px"></div>
+  </div>
+</div>
+<header>
+  <div class="hrow">
+    <div><div class="eyebrow">Запуск 6 · Акробатика</div><h1>Командный дашборд</h1></div>
+    <div class="daysleft">до цели<br><b id="daysLeft">—</b>дней</div>
+  </div>
+  <nav class="wrap" id="nav">
+    <button class="tab on" data-t="overview">Прогресс</button>
+    <button class="tab" data-t="weekly">Неделя</button>
+    <button class="tab" data-t="sales">Продажи</button>
+    <button class="tab" data-t="products">Продукты</button>
+    <button class="tab" data-t="tasks">Задачи</button>
+    <button class="tab" data-t="content">Контент</button>
+    <button class="tab" data-t="expenses">Расходы</button>
+  </nav>
+</header>
+
+<div class="wrap">
+  <section class="on" id="overview">
+    <div class="goalcard">
+      <div class="goalhead">
+        <div class="goalnum num" id="collected">0&nbsp;<small>₽ собрано</small></div>
+        <div class="goalright">цель к 07.11.2026<br><b class="num">5 000 000 ₽</b></div>
+      </div>
+      <div class="bar"><div class="barfill" id="goalBar" style="width:0%"></div><div class="barmark" id="planMark" style="left:0%"></div></div>
+      <div id="rhythmBadge"></div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="secttitle">Что продаётся лучше всего</div>
+    <div class="card" id="leaderboard"></div>
+    <div class="secttitle">Таймлайн продаж запуска</div>
+    <div class="phases" id="phases"></div>
+    <div class="secttitle">Ритм по месяцам — план vs факт</div>
+    <div class="hint">Факт считается автоматически из вкладки «Продажи» по датам. План — нелинейный (пик на старте большого курса), редактируется.</div>
+    <div class="card" id="rhythmRows"></div>
+    <div class="secttitle">Лучший формат по контенту</div>
+    <div class="card" id="bestFormat"></div>
+  </section>
+
+  <section id="sales">
+    <div class="secttitle">Добавить продажу</div>
+    <div class="saleform">
+      <div class="sf-grid">
+        <div class="sf"><label>Продукт</label><select id="saleProduct"></select></div>
+        <div class="sf"><label>Кол-во (для подписок)</label><input class="num" type="number" min="1" id="saleQty" value="1"></div>
+        <div class="sf"><label>Грязная сумма, ₽</label><input class="num" type="number" min="0" id="saleGross" placeholder="0"></div>
+        <div class="sf"><label>Чистая (после комиссий)</label><input class="num" type="number" min="0" id="saleNet" placeholder="= грязной"></div>
+        <div class="sf"><label>Дата</label><input type="date" id="saleDate"></div>
+        <div class="sf"><label>Заметка (необяз.)</label><input id="saleNote" placeholder="имя / источник"></div>
+      </div>
+      <div class="sf" style="margin-top:10px"><label>Тип</label>
+        <div class="typetoggle" id="saleType">
+          <button data-type="продажа" class="on">Продажа</button>
+          <button data-type="предоплата">Предоплата</button>
+          <button data-type="возврат">Возврат</button>
+        </div>
+      </div>
+      <button class="addsale" id="addSale">Записать операцию</button>
+    </div>
+    <div class="secttitle">Последние операции</div>
+    <div id="salesList"></div>
+  </section>
+
+  <section id="products">
+    <div class="secttitle">Продукты запуска</div>
+    <div class="hint">Выручка и количество считаются из вкладки «Продажи». Здесь — цена, статус и окно продаж. Предоплаты — деньги, которые ещё нужно закрыть продуктом.</div>
+    <div id="productCards"></div>
+    <button class="addbtn" id="addProduct">+ Добавить продукт</button>
+  </section>
+
+  <section id="weekly">
+    <div class="secttitle">Фокус недели <span id="weekRange" style="color:var(--mut);font-weight:400;font-size:13px"></span></div>
+    <div class="hint">Не больше трёх ключевых задач на неделю (со среды по среду). Остальное — во вкладке «Задачи».</div>
+    <div id="weekItems"></div>
+    <div class="secttitle" style="margin-top:24px;font-size:14px">История по неделям</div>
+    <div id="weekHistory"></div>
+  </section>
+
+  <section id="tasks">
+    <div class="secttitle">Важные задачи по продуктам</div>
+    <div class="hint">Сгруппированы по направлению. Меняйте продукт, ответственного, дедлайн и статус. Просрочка подсветится.</div>
+    <div id="taskGroups"></div>
+    <button class="addbtn" id="addTask">+ Добавить задачу</button>
+  </section>
+
+  <section id="content">
+    <div class="secttitle">Контент-завод · Reels</div>
+    <div class="hint">Тестируем форматы по 20 роликов. Приоритетная метрика формата — подписки. Цель канала — 60 000 подписчиков.</div>
+    <div class="goalcard">
+      <div class="goalhead"><div class="goalnum num" id="subCurrent">0&nbsp;<small>подписчиков</small></div>
+      <div class="goalright">цель<br><b class="num">60 000</b></div></div>
+      <div class="bar"><div class="barfill" id="subBar" style="width:0%"></div></div>
+    </div>
+    <div class="kpis" id="contentKpis" style="margin-bottom:14px"></div>
+    <div id="formatRows"></div>
+    <button class="addbtn" id="addFormat">+ Добавить формат</button>
+  </section>
+
+  <section id="expenses">
+    <div class="secttitle">Расходы запуска</div>
+    <div class="card">
+      <div class="lab" style="font-size:12px;color:var(--mut)">Всего потрачено</div>
+      <div class="bigtot num" id="expTotal">0 ₽</div>
+      <div class="catbreak" id="catBreak"></div>
+      <div class="psum"><span>Чистая прибыль (чистые продажи − расходы)<b class="num" id="netProfit">0 ₽</b></span></div>
+    </div>
+    <div id="expenseRows"></div>
+    <button class="addbtn" id="addExpense">+ Добавить расход</button>
+  </section>
+</div>
+
+<div class="savebar">
+  <div>
+    <div class="st" id="saveStatus">—</div>
+    <div class="shared" id="lastMetaLine"></div>
+  </div>
+  <button class="refreshbtn" id="refreshBtn">↻ Обновить</button>
+</div>
+
+<script src="state.js"></script>
+<script src="render.js"></script>
+<script src="auth.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
