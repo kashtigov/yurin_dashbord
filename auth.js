@@ -2,7 +2,7 @@
 const STORAGE_URL="https://script.google.com/macros/s/AKfycbxlQSH1w5UAmrXLe7wiK1hxQgH3bPfLrwIi0ToEmOj_B9vtRG6cDEozMqTeXU1WsqNn/exec";
 
 // ====== Google Sign-In ======
-const GOOGLE_CLIENT_ID='ВПИШИ-СЮДА-СВОЙ-CLIENT-ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID='7996169456-kbnff5okn556488suogq5ua03tmri12p.apps.googleusercontent.com';
 const TOKEN_KEY='acro_dash_gtoken';
 function getToken(){return sessionStorage.getItem(TOKEN_KEY)||'';}
 function setToken(t){sessionStorage.setItem(TOKEN_KEY,t);}
