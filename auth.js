@@ -62,15 +62,22 @@ async function gateAndBoot(){
   }
   function showButton(){
     overlay.style.display='flex';
-    if(window.google&&google.accounts&&google.accounts.id){
-      google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>tryEnter(r.credential)});
-      google.accounts.id.renderButton(document.getElementById('googleBtn'),{theme:'outline',size:'large',locale:'ru'});
-    }else{
-      errEl.style.display='block';errEl.textContent='Не удалось загрузить вход Google — проверь интернет и обнови страницу';
-    }
+    // Ждём Google GSI — даём до 5 секунд, потом показываем ошибку
+    let attempts=0;
+    const tryRender=()=>{
+      if(window.google&&google.accounts&&google.accounts.id){
+        google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>tryEnter(r.credential)});
+        google.accounts.id.renderButton(document.getElementById('googleBtn'),{theme:'outline',size:'large',locale:'ru'});
+      } else if(attempts++<25){
+        setTimeout(tryRender,200);
+      } else {
+        errEl.style.display='block';errEl.textContent='Не удалось загрузить вход Google — проверь интернет и обнови страницу';
+      }
+    };
+    tryRender();
   }
   const t0=getToken();
   if(t0){ if(await tryEnter(t0)) return; }
   showButton();
 }
-window.addEventListener('load',gateAndBoot);
+document.addEventListener('DOMContentLoaded',gateAndBoot);
