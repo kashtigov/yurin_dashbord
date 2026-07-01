@@ -62,7 +62,8 @@ function defaultState(){
       ]}
     ],
     formats:[{name:"",made:0,reach:0,repostPct:0,subs:0,verdict:"Тестируется"}],
-    expenses:[{item:"",cat:"Трафик/реклама",amount:0,date:""}]
+    expenses:[{item:"",cat:"Трафик/реклама",amount:0,date:""}],
+    statsHistory:[]
   };
 }
 const TSTATUS=["Не начато","В работе","Готово","Просрочено"];
@@ -95,6 +96,7 @@ function migrate(){
   S.sales.forEach(s=>{ if(s.gross===undefined)s.gross=+s.amount||0; if(s.net===undefined||s.net===null)s.net=s.gross; if(!s.qty)s.qty=1; delete s.amount; });
   S.formats.forEach(f=>{ if(f.repostPct===undefined)f.repostPct=0; if(f.subs===undefined)f.subs=0; delete f.reposts; delete f.saves; });
   if(!Array.isArray(S.weeklyFocus)) S.weeklyFocus=[];
+  if(!Array.isArray(S.statsHistory)) S.statsHistory=[];
 }
 
 // ====== Расчётные функции над S ======

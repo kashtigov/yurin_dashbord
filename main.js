@@ -22,6 +22,19 @@ document.getElementById('addProduct').addEventListener('click',()=>{
 document.getElementById('addTask').addEventListener('click',()=>{S.tasks.unshift({title:"",dir:"general",who:"",deadline:"",status:"Не начато"});renderTasks();save();});
 document.getElementById('addFormat').addEventListener('click',()=>{S.formats.push({name:"",made:0,reach:0,reposts:0,saves:0,verdict:"Тестируется"});renderContent();save();});
 document.getElementById('addExpense').addEventListener('click',()=>{S.expenses.push({item:"",cat:"Прочее",amount:0,date:""});renderExpenses();save();});
+document.getElementById('addStats').addEventListener('click',()=>{
+  const date=document.getElementById('statsDate').value||TODAY.toISOString().slice(0,10);
+  const ig=+document.getElementById('statsIg').value||0;
+  const tg=+document.getElementById('statsTg').value||0;
+  const vk=+document.getElementById('statsVk').value||0;
+  const yt=+document.getElementById('statsYt').value||0;
+  if(!ig&&!tg&&!vk&&!yt){alert('Введи хотя бы одно значение');return;}
+  const existing=S.statsHistory.findIndex(r=>r.date===date);
+  if(existing>=0) S.statsHistory[existing]={date,instagram:ig,telegram:tg,vk,youtube:yt};
+  else S.statsHistory.push({date,instagram:ig,telegram:tg,vk,youtube:yt});
+  ['statsIg','statsTg','statsVk','statsYt'].forEach(id=>document.getElementById(id).value='');
+  renderStats();save();
+});
 
 document.getElementById('refreshBtn').addEventListener('click',async()=>{
   setStatus("обновляю…");

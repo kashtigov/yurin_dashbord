@@ -146,6 +146,21 @@
   .wkhistdate{font-family:"JetBrains Mono",Inter,monospace;font-size:11px;color:var(--mut);margin-bottom:7px}
   .wkhistitem{font-size:13px;color:var(--dim);padding:3px 0}
   .wkhistitem.done{color:var(--txt);text-decoration:line-through;text-decoration-color:var(--good)}
+  .statsform .sf-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .statstbl{width:100%;border-collapse:collapse;font-size:13px}
+  .statstbl th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);color:var(--mut);font-weight:500;white-space:nowrap}
+  .statstbl td{padding:8px 10px;border-bottom:1px solid var(--line);color:var(--txt);vertical-align:top}
+  .statstbl tr:last-child td{border-bottom:none}
+  .statstbl .mono{font-family:"JetBrains Mono",Inter,monospace;font-size:12px;color:var(--mut)}
+  .tlrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .tlrow:last-child{border-bottom:none}
+  .tlrow.tldone{opacity:.4}
+  .tlrow.tlnow .tlname{font-weight:600;color:var(--txt)}
+  .tldot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .tldate{font-family:"JetBrains Mono",Inter,monospace;font-size:11px;color:var(--mut);min-width:90px}
+  .tlname{flex:1;color:var(--txt)}
+  .tlbadge{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--accent);color:#1a1205;font-weight:600;white-space:nowrap}
+  .tlbadge.tldone{background:var(--panel2);color:var(--mut);font-weight:400}
 
   .savebar{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(0deg,var(--ink),rgba(12,14,19,.82));border-top:1px solid var(--line);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:30}
   .savebar .st{font-size:12px;color:var(--mut);font-family:"JetBrains Mono",Inter,monospace}

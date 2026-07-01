@@ -1,3 +1,120 @@
+// ====== Данные таймлайна запуска ======
+const PHASES=[
+  {s:"2026-06-29",e:"2026-07-02",n:"Подготовка к съёмке",t:"prep"},
+  {s:"2026-07-01",e:"2026-07-14",n:"Прогрев к ЯДРУ",t:"warm"},
+  {s:"2026-07-05",e:"2026-07-05",n:"Съёмка",t:"shoot"},
+  {s:"2026-07-07",e:"2026-07-10",n:"Подготовка к съёмке",t:"prep"},
+  {s:"2026-07-07",e:"2026-07-14",n:"Финальная упаковка ЯДРА",t:"pack"},
+  {s:"2026-07-14",e:"2026-07-14",n:"Съёмка",t:"shoot"},
+  {s:"2026-07-15",e:"2026-07-25",n:"Старт продаж ЯДРА",t:"sales"},
+  {s:"2026-07-16",e:"2026-07-19",n:"Подготовка к съёмке",t:"prep"},
+  {s:"2026-07-18",e:"2026-07-24",n:"СРМ",t:"crm"},
+  {s:"2026-07-23",e:"2026-07-23",n:"Съёмка",t:"shoot"},
+  {s:"2026-07-25",e:"2026-08-04",n:"Финальная упаковка КЛУБА",t:"pack"},
+  {s:"2026-07-25",e:"2026-07-28",n:"Подготовка к съёмке",t:"prep"},
+  {s:"2026-07-27",e:"2026-08-04",n:"Прогрев к КЛУБУ",t:"warm"},
+  {s:"2026-08-01",e:"2026-08-01",n:"Съёмка",t:"shoot"},
+  {s:"2026-08-03",e:"2026-08-06",n:"Подготовка к съёмке",t:"prep"},
+  {s:"2026-08-05",e:"2026-08-10",n:"Продажи клуба",t:"sales"},
+  {s:"2026-08-11",e:"2026-08-11",n:"Съёмка",t:"shoot"},
+  {s:"2026-08-13",e:"2026-08-16",n:"Подготовка к съёмке",t:"prep"},
+  {s:"2026-08-15",e:"2026-08-24",n:"Финальная упаковка РАСПРОДАЖИ",t:"pack"},
+  {s:"2026-08-19",e:"2026-08-24",n:"Прогрев к РАСПРОДАЖЕ",t:"warm"},
+  {s:"2026-08-20",e:"2026-08-20",n:"Съёмка",t:"shoot"},
+  {s:"2026-08-22",e:"2026-08-25",n:"Подготовка к съёмке",t:"prep"},
+  {s:"2026-08-25",e:"2026-09-01",n:"РАСПРОДАЖА",t:"sales"},
+  {s:"2026-08-29",e:"2026-08-29",n:"Съёмка",t:"shoot"},
+  {s:"2026-09-02",e:"2026-09-12",n:"Финальная упаковка БК",t:"pack"},
+  {s:"2026-09-02",e:"2026-11-07",n:"Прогрев к БК",t:"warm"},
+  {s:"2026-09-10",e:"2026-11-07",n:"Старт продаж БК",t:"sales"},
+];
+const LANE_CFG=[
+  {t:"sales",label:"💸 Продажи",  color:"#3ecf8e"},
+  {t:"warm", label:"🔥 Прогрев",  color:"#f97316"},
+  {t:"pack", label:"🏁 Упаковка", color:"#5b9bd5"},
+  {t:"prep", label:"⚡️ Съёмка", color:"#d4a24a"},
+  {t:"crm",  label:"💻 СРМ",     color:"#c08ae8"},
+  {t:"shoot",label:"🎬 Даты съёмок",color:"#888"},
+];
+
+function renderTimeline(){
+  const todayStr=TODAY.toISOString().slice(0,10);
+  const D0=new Date('2026-06-28T00:00:00'),D1=new Date('2026-11-08T00:00:00');
+  const TOTAL=(D1-D0)/86400000;
+  const LW=102,CX=LW+5,CW=760,ROW=30,HDR=26,PAD=8,W=LW+CW+PAD+10;
+  const H=HDR+LANE_CFG.length*ROW+PAD+14;
+  function dx(dateStr){return CX+(new Date(dateStr+'T00:00:00')-D0)/86400000/TOTAL*CW;}
+
+  // Сетка и подписи месяцев
+  const MONTHS=[['2026-07-01','Июль'],['2026-08-01','Август'],['2026-09-01','Сен.'],['2026-10-01','Окт.'],['2026-11-01','Ноя.']];
+  let grid=MONTHS.map(([d,nm])=>{const x=dx(d).toFixed(1);return`<line x1="${x}" y1="${HDR-6}" x2="${x}" y2="${H-PAD-12}" stroke="var(--line)" stroke-width="1"/>
+    <text x="${x}" y="${HDR-10}" font-size="10" fill="var(--dim)">${nm}</text>`;}).join('');
+
+  // Линия «сегодня»
+  const tx=dx(todayStr);
+  const todayLine=tx>=CX&&tx<=CX+CW?`<line x1="${tx.toFixed(1)}" y1="${HDR-6}" x2="${tx.toFixed(1)}" y2="${H-PAD-12}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <text x="${tx.toFixed(1)}" y="${H-PAD+2}" font-size="9" fill="var(--accent)" text-anchor="middle">сегодня</text>`:'';
+
+  // Полосы по лейнам
+  let labels='',bars='';
+  LANE_CFG.forEach((lane,li)=>{
+    const y=HDR+li*ROW,cy=y+ROW/2;
+    labels+=`<text x="${LW-4}" y="${(cy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--mut)">${lane.label}</text>`;
+    const events=PHASES.filter(p=>p.t===lane.t);
+    if(lane.t==='shoot'){
+      events.forEach(p=>{const x=dx(p.s);bars+=`<circle cx="${x.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="${lane.color}"><title>🎬 Съёмка · ${p.s.slice(5).replace('-','.')}</title></circle>`;});
+    } else {
+      events.forEach(p=>{
+        const x1=dx(p.s),x2=Math.max(dx(p.e)+CW/TOTAL,x1+6),bw=x2-x1,bh=ROW-10,by=cy-bh/2;
+        const done=new Date(p.e+'T23:59:59')<TODAY,now=new Date(p.s+'T00:00:00')<=TODAY&&TODAY<=new Date(p.e+'T23:59:59');
+        const op=done?0.32:1;
+        bars+=`<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="${lane.color}" opacity="${op}">
+          <title>${p.n}\n${p.s.slice(5).replace('-','.')} — ${p.e.slice(5).replace('-','.')}</title></rect>`;
+        if(now) bars+=`<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="none" stroke="white" stroke-width="1.5" opacity="0.7"/>`;
+        if(bw>52){const nm=p.n.length>13?p.n.slice(0,12)+'…':p.n;bars+=`<text x="${(x1+4).toFixed(1)}" y="${(cy+4).toFixed(1)}" font-size="10" fill="${done?'var(--dim)':'white'}" font-weight="500" style="pointer-events:none">${nm}</text>`;}
+      });
+    }
+  });
+
+  document.getElementById('timelineGantt').innerHTML=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <svg viewBox="0 0 ${W} ${H}" width="${W}" style="min-width:${W}px;max-width:100%;display:block">
+      ${grid}${todayLine}${labels}${bars}
+    </svg></div>`;
+
+  // Список всех событий под Гантом
+  const sorted=[...PHASES].sort((a,b)=>a.s.localeCompare(b.s));
+  const fmtDate=d=>{const[,m,day]=d.split('-');return`${+day}.${+m}`;};
+  const colOf=t=>LANE_CFG.find(l=>l.t===t)?.color||'var(--mut)';
+  const emojiOf=t=>({sales:'💸',warm:'🔥',pack:'🏁',prep:'⚡️',crm:'💻',shoot:'🎬'}[t]||'');
+  document.getElementById('timelineList').innerHTML=sorted.map(p=>{
+    const done=new Date(p.e+'T23:59:59')<TODAY;
+    const now=new Date(p.s+'T00:00:00')<=TODAY&&TODAY<=new Date(p.e+'T23:59:59');
+    return`<div class="tlrow ${done?'tldone':now?'tlnow':''}">
+      <span class="tldot" style="background:${colOf(p.t)}"></span>
+      <span class="tldate">${fmtDate(p.s)}${p.s!==p.e?` — ${fmtDate(p.e)}`:''}</span>
+      <span class="tlname">${emojiOf(p.t)} ${p.n}</span>
+      ${now?'<span class="tlbadge">сейчас</span>':done?'<span class="tlbadge tldone">✓</span>':''}
+    </div>`;
+  }).join('');
+}
+
+function renderPhases(){
+  const todayStr=TODAY.toISOString().slice(0,10);
+  const active=PHASES.filter(p=>p.s<=todayStr&&todayStr<=p.e);
+  const upcoming=PHASES.filter(p=>p.s>todayStr).slice(0,3);
+  const colOf=t=>LANE_CFG.find(l=>l.t===t)?.color||'var(--accent)';
+  const emojiOf=t=>({sales:'💸',warm:'🔥',pack:'🏁',prep:'⚡️',crm:'💻',shoot:'🎬'}[t]||'');
+  const fmtD=d=>{const[,m,day]=d.split('-');return`${+day}.${+m}`;};
+  let html='';
+  if(active.length) html+=active.map(p=>`<div class="phase now" style="border-color:${colOf(p.t)}">
+    <div class="pd" style="color:${colOf(p.t)}">${fmtD(p.s)}–${fmtD(p.e)}</div>
+    <div class="pn">${emojiOf(p.t)} ${p.n}</div></div>`).join('');
+  if(upcoming.length) html+=upcoming.map(p=>`<div class="phase">
+    <div class="pd">${fmtD(p.s)}</div>
+    <div class="pn">${emojiOf(p.t)} ${p.n}</div></div>`).join('');
+  document.getElementById('phases').innerHTML=html||'<div class="empty">Все этапы запуска завершены.</div>';
+}
+
 function updateRhythmDerived(){
   document.getElementById('planMark').style.left=Math.min(100,planToDate()/S.goal*100).toFixed(1)+'%';
   const col=grossCollected(),ptd=planToDate(),rb=document.getElementById('rhythmBadge');
@@ -23,29 +140,12 @@ function renderOverview(){
     {l:"Продаж",v:RUB(sales),s:""}
   ].map(c=>`<div class="kpi"><div class="lab">${c.l}</div><div class="v num ${c.cls||''}">${c.v}${c.s?` <small>${c.s}</small>`:''}</div></div>`).join('');
   renderLeaderboard();renderPhases();renderRhythmRows();renderBestFormat();
-}
-function renderLeaderboard(){
   const data=S.products.map(p=>({p,rev:prodGross(p.id),units:prodUnits(p.id)})).sort((a,b)=>b.rev-a.rev);
   const max=Math.max(...data.map(d=>d.rev),1),any=data.some(d=>d.rev>0);
   document.getElementById('leaderboard').innerHTML=any?data.map(d=>`
     <div class="lbrow"><div class="lbname">${esc(d.p.name)}</div>
     <div class="lbbar"><div class="lbfill" style="width:${Math.max(2,d.rev/max*100)}%;background:${dirTag(d.p.tag)}"></div><span class="lbval">${RUB(d.rev)} ₽ · ${d.units} шт</span></div></div>`).join('')
     :`<div class="empty">Пока нет продаж. Внеси первую во вкладке «Продажи» — увидишь, какой продукт лидирует.</div>`;
-}
-function renderPhases(){
-  const ph=[
-    {d:"Кон. июня",n:"Клуб",end:new Date(2026,5,30)},
-    {d:"Нач. июля",n:"«Ядро акробатики» 30к",end:new Date(2026,6,7)},
-    {d:"Нач. августа",n:"Клуб",end:new Date(2026,7,7)},
-    {d:"Кон. августа",n:"Распродажа",end:new Date(2026,7,31)},
-    {d:"Нач. сентября",n:"Клуб (опц.)",end:new Date(2026,8,7)},
-    {d:"10 сен–окт",n:"Большой курс",end:new Date(2026,9,31)},
-    {d:"7 ноября",n:"Цель 5 000 000 ₽",end:DEADLINE}
-  ];
-  document.getElementById('phases').innerHTML=ph.map((p,i)=>{
-    const done=p.end<TODAY,now=!done&&(i===0||ph[i-1].end<TODAY);
-    return `<div class="phase ${done?'done':now?'now':''}"><div class="pd">${p.d}</div><div class="pn">${p.n}</div></div>`;
-  }).join('');
 }
 function renderRhythmRows(){
   document.getElementById('rhythmRows').innerHTML=S.months.map((m,i)=>{
@@ -228,6 +328,56 @@ function renderWeekly(){
   }).join(''):'<div class="empty">История появится после первой завершённой недели.</div>';
 }
 
-function renderAll(){buildSaleProducts();renderOverview();renderWeekly();renderSalesList();renderProducts();renderTasks();renderContent();renderExpenses();
+function renderStats(){
+  document.getElementById('statsDate').value=TODAY.toISOString().slice(0,10);
+  const rows=[...S.statsHistory].sort((a,b)=>b.date.localeCompare(a.date));
+  const NETS=[{k:'instagram',label:'Instagram',color:'#e1306c'},{k:'telegram',label:'Telegram',color:'#2aabee'},{k:'vk',label:'ВКонтакте',color:'#4a76a8'},{k:'youtube',label:'YouTube',color:'#ff0000'}];
+
+  document.getElementById('statsHistory').innerHTML=rows.length?`
+    <table class="statstbl">
+      <thead><tr><th>Дата</th>${NETS.map(n=>`<th style="color:${n.color}">${n.label}</th>`).join('')}<th></th></tr></thead>
+      <tbody>${rows.map((r,i)=>{
+        const realIdx=S.statsHistory.findIndex(x=>x.date===r.date);
+        const prev=rows[i+1];
+        function diff(k){const d=(+r[k]||0)-(+prev?.[k]||0);if(!prev||d===0)return'';const col=d>0?'var(--good)':'var(--bad)';return`<span style="color:${col};font-size:11px">${d>0?'+':''}${d.toLocaleString('ru-RU')}</span>`;}
+        return`<tr><td class="mono">${r.date}</td>${NETS.map(n=>`<td>${(+r[n.k]||0).toLocaleString('ru-RU')}<br>${diff(n.k)}</td>`).join('')}<td><button class="del" data-sdel="${realIdx}">×</button></td></tr>`;
+      }).join('')}</tbody>
+    </table>`:'<div class="empty">Замеров пока нет</div>';
+
+  document.querySelectorAll('[data-sdel]').forEach(el=>el.addEventListener('click',()=>{S.statsHistory.splice(+el.dataset.sdel,1);renderStats();renderStatsChart();save();}));
+  renderStatsChart();
+}
+
+function renderStatsChart(){
+  const el=document.getElementById('statsChartWrap');
+  const rows=[...S.statsHistory].sort((a,b)=>a.date.localeCompare(b.date));
+  if(rows.length<2){el.innerHTML='<div class="empty">Нужно минимум 2 замера для графика.</div>';return;}
+  const NETS=[{k:'instagram',label:'IG',color:'#e1306c'},{k:'telegram',label:'TG',color:'#2aabee'},{k:'vk',label:'VK',color:'#4a76a8'},{k:'youtube',label:'YT',color:'#ff0000'}];
+  const W=560,H=200,PL=48,PR=16,PT=12,PB=36;
+  const allVals=rows.flatMap(r=>NETS.map(n=>+r[n.k]||0)).filter(v=>v>0);
+  if(!allVals.length){el.innerHTML='<div class="empty">Все значения нули — добавь реальные цифры.</div>';return;}
+  const minV=Math.min(...allVals),maxV=Math.max(...allVals);
+  const pad=(maxV-minV)*0.1||maxV*0.1||1;
+  const lo=Math.max(0,minV-pad),hi=maxV+pad;
+  const cx=i=>(PL+(W-PL-PR)*i/(rows.length-1)).toFixed(1);
+  const cy=v=>(PT+(H-PT-PB)*(1-(v-lo)/(hi-lo))).toFixed(1);
+  const fmt=n=>n>=1000?(n/1000).toFixed(1)+'k':n;
+  const yTicks=4;
+  let gridLines='',yLabels='';
+  for(let i=0;i<=yTicks;i++){const v=lo+(hi-lo)*i/yTicks;const y=cy(v);gridLines+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`;yLabels+=`<text x="${PL-4}" y="${+y+4}" text-anchor="end" fill="var(--dim)" font-size="10">${fmt(Math.round(v))}</text>`;}
+  let xLabels='';
+  const step=Math.max(1,Math.floor(rows.length/5));
+  rows.forEach((r,i)=>{if(i%step===0||i===rows.length-1)xLabels+=`<text x="${cx(i)}" y="${H-PB+14}" text-anchor="middle" fill="var(--dim)" font-size="10">${r.date.slice(5)}</text>`;});
+  let lines='',dots='';
+  NETS.forEach(n=>{
+    const pts=rows.map((r,i)=>`${cx(i)},${cy(+r[n.k]||lo)}`).join(' ');
+    lines+=`<polyline points="${pts}" fill="none" stroke="${n.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+    rows.forEach((r,i)=>{const v=+r[n.k]||0;if(v>0)dots+=`<circle cx="${cx(i)}" cy="${cy(v)}" r="3.5" fill="${n.color}"><title>${n.label}: ${v.toLocaleString('ru-RU')}\n${r.date}</title></circle>`;});
+  });
+  const legend=NETS.map(n=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px;color:var(--mut)"><span style="width:14px;height:3px;background:${n.color};display:inline-block;border-radius:2px"></span>${n.label}</span>`).join('');
+  el.innerHTML=`<div style="margin-bottom:8px">${legend}</div><svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible">${gridLines}${yLabels}${xLabels}${lines}${dots}</svg>`;
+}
+
+function renderAll(){buildSaleProducts();renderOverview();renderWeekly();renderTimeline();renderSalesList();renderProducts();renderTasks();renderContent();renderExpenses();renderStats();
   const m=document.getElementById('lastMetaLine'); if(m) m.textContent=lastMeta?('последнее изменение: '+lastMeta):'';
 }

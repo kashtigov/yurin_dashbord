@@ -34,6 +34,8 @@
     <button class="tab" data-t="tasks">Задачи</button>
     <button class="tab" data-t="content">Контент</button>
     <button class="tab" data-t="expenses">Расходы</button>
+    <button class="tab" data-t="stats">Статистика</button>
+    <button class="tab" data-t="timeline">Таймлайн</button>
   </nav>
 </header>
 
@@ -50,13 +52,33 @@
     <div class="kpis" id="kpis"></div>
     <div class="secttitle">Что продаётся лучше всего</div>
     <div class="card" id="leaderboard"></div>
-    <div class="secttitle">Таймлайн продаж запуска</div>
+    <div class="secttitle">Активно сейчас <span style="font-size:12px;font-weight:400;color:var(--mut)">→ <a href="#" onclick="document.querySelector('[data-t=timeline]').click();return false" style="color:var(--mut)">весь таймлайн</a></span></div>
     <div class="phases" id="phases"></div>
     <div class="secttitle">Ритм по месяцам — план vs факт</div>
     <div class="hint">Факт считается автоматически из вкладки «Продажи» по датам. План — нелинейный (пик на старте большого курса), редактируется.</div>
     <div class="card" id="rhythmRows"></div>
     <div class="secttitle">Лучший формат по контенту</div>
     <div class="card" id="bestFormat"></div>
+    <div class="secttitle">Рост аудитории</div>
+    <div class="hint">Данные из вкладки «Статистика» — обновляются раз в неделю.</div>
+    <div class="card" id="statsChartWrap"><div class="empty">Нет данных — зайди в «Статистика» и внеси первые цифры.</div></div>
+  </section>
+
+  <section id="stats">
+    <div class="secttitle">Подписчики по соцсетям</div>
+    <div class="hint">Вноси раз в неделю. График сразу обновится на главной.</div>
+    <div class="statsform card">
+      <div class="sf-grid">
+        <div><label>Дата замера</label><input type="date" id="statsDate"></div>
+        <div><label>Instagram</label><input type="number" id="statsIg" min="0" placeholder="0"></div>
+        <div><label>Telegram</label><input type="number" id="statsTg" min="0" placeholder="0"></div>
+        <div><label>ВКонтакте</label><input type="number" id="statsVk" min="0" placeholder="0"></div>
+        <div><label>YouTube</label><input type="number" id="statsYt" min="0" placeholder="0"></div>
+      </div>
+      <button class="addbtn" id="addStats" style="margin-top:10px">+ Добавить замер</button>
+    </div>
+    <div class="secttitle" style="margin-top:20px">История замеров</div>
+    <div id="statsHistory"></div>
   </section>
 
   <section id="sales">
@@ -128,6 +150,16 @@
     </div>
     <div id="expenseRows"></div>
     <button class="addbtn" id="addExpense">+ Добавить расход</button>
+  </section>
+
+  <section id="timeline">
+    <div class="secttitle">Таймлайн запуска · июль–ноябрь 2026</div>
+    <div class="hint">Прошедшие события приглушены. Активные сейчас — с белым контуром. Вертикальная линия — сегодня.</div>
+    <div class="card" style="padding:14px 10px;overflow:hidden">
+      <div id="timelineGantt"></div>
+    </div>
+    <div class="secttitle" style="margin-top:20px">Все события</div>
+    <div id="timelineList"></div>
   </section>
 </div>
 
