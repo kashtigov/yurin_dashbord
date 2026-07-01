@@ -140,6 +140,8 @@ function renderOverview(){
     {l:"Продаж",v:RUB(sales),s:""}
   ].map(c=>`<div class="kpi"><div class="lab">${c.l}</div><div class="v num ${c.cls||''}">${c.v}${c.s?` <small>${c.s}</small>`:''}</div></div>`).join('');
   renderLeaderboard();renderPhases();renderRhythmRows();renderBestFormat();
+}
+function renderLeaderboard(){
   const data=S.products.map(p=>({p,rev:prodGross(p.id),units:prodUnits(p.id)})).sort((a,b)=>b.rev-a.rev);
   const max=Math.max(...data.map(d=>d.rev),1),any=data.some(d=>d.rev>0);
   document.getElementById('leaderboard').innerHTML=any?data.map(d=>`
@@ -378,6 +380,8 @@ function renderStatsChart(){
   el.innerHTML=`<div style="margin-bottom:8px">${legend}</div><svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible">${gridLines}${yLabels}${xLabels}${lines}${dots}</svg>`;
 }
 
-function renderAll(){buildSaleProducts();renderOverview();renderWeekly();renderTimeline();renderSalesList();renderProducts();renderTasks();renderContent();renderExpenses();renderStats();
+function renderAll(){
+  const steps=[buildSaleProducts,renderOverview,renderWeekly,renderTimeline,renderSalesList,renderProducts,renderTasks,renderContent,renderExpenses,renderStats];
+  steps.forEach(fn=>{try{fn();}catch(e){console.error('Ошибка в '+fn.name+':',e);}});
   const m=document.getElementById('lastMetaLine'); if(m) m.textContent=lastMeta?('последнее изменение: '+lastMeta):'';
 }
