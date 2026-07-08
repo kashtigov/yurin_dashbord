@@ -56,9 +56,9 @@ function defaultState(){
     ],
     weeklyFocus:[
       {weekStart:"2026-06-17",items:[
-        {text:"Утвердить концепцию клуба и дату открытия продаж",done:false},
-        {text:"Написать стратегию прогрева на клуб",done:false},
-        {text:"Разобрать Todoist — навести порядок в задачах",done:false}
+        {plan:"Утвердить концепцию клуба и дату открытия продаж",fact:"",progress:0},
+        {plan:"Написать стратегию прогрева на клуб",fact:"",progress:0},
+        {plan:"Разобрать Todoist — навести порядок в задачах",fact:"",progress:0}
       ]}
     ],
     formats:[{name:"",made:0,reach:0,repostPct:0,subs:0,verdict:"Тестируется"}],
@@ -96,6 +96,14 @@ function migrate(){
   S.sales.forEach(s=>{ if(s.gross===undefined)s.gross=+s.amount||0; if(s.net===undefined||s.net===null)s.net=s.gross; if(!s.qty)s.qty=1; delete s.amount; });
   S.formats.forEach(f=>{ if(f.repostPct===undefined)f.repostPct=0; if(f.subs===undefined)f.subs=0; delete f.reposts; delete f.saves; });
   if(!Array.isArray(S.weeklyFocus)) S.weeklyFocus=[];
+  S.weeklyFocus.forEach(w=>{
+    if(Array.isArray(w.items)) w.items.forEach(it=>{
+      if(it.plan===undefined) it.plan=it.text||'';
+      if(it.fact===undefined) it.fact='';
+      if(it.progress===undefined) it.progress=it.done?100:0;
+      delete it.text; delete it.done;
+    });
+  });
   if(!Array.isArray(S.statsHistory)) S.statsHistory=[];
 }
 

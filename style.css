@@ -139,13 +139,19 @@
   .addbtn:hover{border-color:var(--blue);color:var(--txt)}
   .bigtot{font-family:"Space Grotesk",Inter,sans-serif;font-weight:700;font-size:26px;margin-top:4px}
   .empty{color:var(--dim);font-size:13px;text-align:center;padding:24px 10px}
-  .wkitem{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
-  .wkitem input[type=checkbox]{width:19px;height:19px;accent-color:var(--accent);flex-shrink:0}
-  .wktext{flex:1;background:none;border:none;color:var(--txt);font-size:14px;padding:4px 0}
+  .wkitem{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+  .wkihead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .wknum{font-family:"JetBrains Mono",Inter,monospace;font-size:11px;color:var(--mut)}
+  .wkpct{font-family:"JetBrains Mono",Inter,monospace;font-size:14px;font-weight:600;margin-left:auto}
+  .wkdel{border:none;background:none;color:var(--dim);font-size:18px;cursor:pointer;line-height:1;padding:0 4px}
+  .wktext{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:9px 10px;font-size:14px;margin-bottom:7px;box-sizing:border-box}
+  .wkfact{color:var(--good)}
+  .wkrange{width:100%;accent-color:var(--accent);margin-top:2px}
+  .wkavg{font-size:13px;color:var(--mut);margin-top:6px;padding:8px 2px}
   .wkhist{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px}
   .wkhistdate{font-family:"JetBrains Mono",Inter,monospace;font-size:11px;color:var(--mut);margin-bottom:7px}
   .wkhistitem{font-size:13px;color:var(--dim);padding:3px 0}
-  .wkhistitem.done{color:var(--txt);text-decoration:line-through;text-decoration-color:var(--good)}
+  .wkhistitem.done{color:var(--txt)}
   .statsform .sf-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
   .statstbl{width:100%;border-collapse:collapse;font-size:13px}
   .statstbl th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);color:var(--mut);font-weight:500;white-space:nowrap}

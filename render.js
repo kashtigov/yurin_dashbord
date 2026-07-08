@@ -303,32 +303,84 @@ function currentWeekStart(){ return weekStartISO(TODAY); }
 function getOrCreateCurrentWeek(){
   const ws=currentWeekStart();
   let w=S.weeklyFocus.find(x=>x.weekStart===ws);
-  if(!w){ w={weekStart:ws,items:[{text:"",done:false},{text:"",done:false},{text:"",done:false}]}; S.weeklyFocus.push(w); }
+  if(!w){ w={weekStart:ws,items:[newWeekItem(),newWeekItem(),newWeekItem()]}; S.weeklyFocus.push(w); }
   return w;
 }
+function newWeekItem(){return {plan:"",fact:"",progress:0};}
 function weekRangeLabel(ws){
   const start=new Date(ws+'T00:00:00'); const end=new Date(start); end.setDate(end.getDate()+6);
   const f=d=>d.getDate()+' '+MN[d.getMonth()];
   return f(start)+' – '+f(end);
 }
+function progColor(p){return p>=100?'var(--good)':p>=50?'var(--accent)':'var(--warn)';}
+
+function weekItemHTML(it,i,wKey){
+  const p=+it.progress||0;
+  return `<div class="wkitem">
+    <div class="wkihead">
+      <span class="wknum">№${i+1}</span>
+      <span class="wkpct" style="color:${progColor(p)}">${p}%</span>
+      <button class="del wkdel" data-wkdel="${i}" data-wk="${wKey}">×</button>
+    </div>
+    <input class="wktext" data-wkfield="plan" data-wki="${i}" data-wk="${wKey}" value="${esc(it.plan)}" placeholder="План: что задумали сделать">
+    <input class="wktext wkfact" data-wkfield="fact" data-wki="${i}" data-wk="${wKey}" value="${esc(it.fact)}" placeholder="Факт: что реально вышло">
+    <input class="wkrange" type="range" min="0" max="100" step="5" value="${p}" data-wkprog="${i}" data-wk="${wKey}" style="--c:${progColor(p)}">
+  </div>`;
+}
+
+function bindWeekItemEvents(){
+  document.querySelectorAll('[data-wkfield]').forEach(el=>el.addEventListener('input',()=>{
+    const w=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wk); if(!w)return;
+    w.items[+el.dataset.wki][el.dataset.wkfield]=el.value; save();
+  }));
+  document.querySelectorAll('[data-wkprog]').forEach(el=>el.addEventListener('input',()=>{
+    const w=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wk); if(!w)return;
+    w.items[+el.dataset.wkprog].progress=+el.value; renderWeekly(); save();
+  }));
+  document.querySelectorAll('[data-wkdel]').forEach(el=>el.addEventListener('click',()=>{
+    const w=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wk); if(!w)return;
+    w.items.splice(+el.dataset.wkdel,1); renderWeekly(); save();
+  }));
+}
+
 function renderWeekly(){
   const w=getOrCreateCurrentWeek();
   document.getElementById('weekRange').textContent=weekRangeLabel(w.weekStart);
-  document.getElementById('weekItems').innerHTML=w.items.map((it,i)=>`
-    <div class="wkitem">
-      <input type="checkbox" data-wkdone="${i}" ${it.done?'checked':''}>
-      <input class="wktext" data-wktext="${i}" value="${esc(it.text)}" placeholder="Ключевая задача №${i+1}">
-    </div>`).join('');
-  document.querySelectorAll('[data-wkdone]').forEach(el=>el.addEventListener('change',()=>{w.items[+el.dataset.wkdone].done=el.checked;renderWeekly();save();}));
-  document.querySelectorAll('[data-wktext]').forEach(el=>el.addEventListener('input',()=>{w.items[+el.dataset.wktext].text=el.value;save();}));
+  const avg=w.items.length?Math.round(w.items.reduce((a,it)=>a+(+it.progress||0),0)/w.items.length):0;
+  document.getElementById('weekItems').innerHTML=
+    w.items.map((it,i)=>weekItemHTML(it,i,w.weekStart)).join('')+
+    `<button class="addbtn" id="addWeekItem">+ Добавить задачу недели</button>
+     <div class="wkavg">Средний прогресс недели: <b style="color:${progColor(avg)}">${avg}%</b></div>`;
+  bindWeekItemEvents();
+  document.getElementById('addWeekItem').addEventListener('click',()=>{w.items.push(newWeekItem());renderWeekly();save();});
 
+  // Архив прошлых недель — редактируемый
   const history=[...S.weeklyFocus].filter(x=>x.weekStart!==w.weekStart).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
   document.getElementById('weekHistory').innerHTML=history.length?history.map(h=>{
-    const doneCount=h.items.filter(it=>it.done).length;
-    return `<div class="wkhist"><div class="wkhistdate">${weekRangeLabel(h.weekStart)} · ${doneCount}/${h.items.length} выполнено</div>
-      ${h.items.map(it=>`<div class="wkhistitem ${it.done?'done':''}">${it.done?'✓':'○'} ${esc(it.text)||'—'}</div>`).join('')}</div>`;
+    const havg=h.items.length?Math.round(h.items.reduce((a,it)=>a+(+it.progress||0),0)/h.items.length):0;
+    const open=editedWeeks.has(h.weekStart);
+    return `<div class="wkhist">
+      <div class="wkhistdate" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" data-wktoggle="${h.weekStart}">
+        <span>${weekRangeLabel(h.weekStart)} · <b style="color:${progColor(havg)}">${havg}%</b></span>
+        <span style="color:var(--mut)">${open?'▲ свернуть':'▼ редактировать'}</span>
+      </div>
+      ${open
+        ? h.items.map((it,i)=>weekItemHTML(it,i,h.weekStart)).join('')+`<button class="addbtn" data-wkadd="${h.weekStart}">+ Задача</button>`
+        : h.items.map(it=>`<div class="wkhistitem ${(+it.progress||0)>=100?'done':''}">${(+it.progress||0)>=100?'✓':(+it.progress||0)+'%'} ${esc(it.plan)||'—'}${it.fact?` <span style="color:var(--dim)">→ ${esc(it.fact)}</span>`:''}</div>`).join('')
+      }
+    </div>`;
   }).join(''):'<div class="empty">История появится после первой завершённой недели.</div>';
+
+  document.querySelectorAll('[data-wktoggle]').forEach(el=>el.addEventListener('click',()=>{
+    const k=el.dataset.wktoggle; editedWeeks.has(k)?editedWeeks.delete(k):editedWeeks.add(k); renderWeekly();
+  }));
+  document.querySelectorAll('[data-wkadd]').forEach(el=>el.addEventListener('click',()=>{
+    const w2=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wkadd); if(!w2)return;
+    w2.items.push(newWeekItem()); renderWeekly(); save();
+  }));
+  bindWeekItemEvents();
 }
+let editedWeeks=new Set();
 
 function renderStats(){
   document.getElementById('statsDate').value=TODAY.toISOString().slice(0,10);
