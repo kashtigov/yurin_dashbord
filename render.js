@@ -1,3 +1,6 @@
+// ====== Состояние сворачиваемых секций (по умолчанию свёрнуты) ======
+const collapsed={sales:true, expenses:true, archive:true};
+
 // ====== Данные таймлайна запуска ======
 const PHASES=[
   {s:"2026-06-29",e:"2026-07-02",n:"Подготовка к съёмке",t:"prep"},
@@ -169,7 +172,12 @@ function renderRhythmRows(){
 function buildSaleProducts(){document.getElementById('saleProduct').innerHTML=S.products.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');}
 function renderSalesList(){
   const sorted=[...S.sales].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  document.getElementById('salesList').innerHTML=sorted.length?sorted.map(s=>{
+  const wrap=document.getElementById('salesList');
+  const head=`<div class="collapse-head" data-collapse="sales">
+    <span class="ct">История операций <span class="cn">${sorted.length}</span></span>
+    <span class="cc">${collapsed.sales?'▼ показать':'▲ скрыть'}</span></div>`;
+  if(collapsed.sales){ wrap.innerHTML=head; bindCollapse(); return; }
+  const list=sorted.length?sorted.map(s=>{
     const p=prod(s.product),pre=s.type==="предоплата",ref=s.type==="возврат";
     const meta=[s.date||'без даты',(+s.qty>1?s.qty+' шт':''),(+s.net!==+s.gross?'чистыми '+RUB(s.net)+' ₽':''),(pre?'предоплата':''),(ref?'возврат':''),(s.note?esc(s.note):'')].filter(Boolean).join(' · ');
     return `<div class="salerow"><span class="saledot" style="background:${ref?'var(--bad)':pre?'var(--warn)':(p?dirTag(p.tag):'var(--mut)')}"></span>
@@ -177,9 +185,21 @@ function renderSalesList(){
       <div class="saleamt ${pre?'pre':''}" style="${ref?'color:var(--bad)':''}">${ref?'−':''}${RUB(s.gross)} ₽</div>
       <button class="del" data-sdel="${s.id}">×</button></div>`;
   }).join(''):`<div class="empty">Операций пока нет.</div>`;
+  wrap.innerHTML=head+list;
+  bindCollapse();
   document.querySelectorAll('[data-sdel]').forEach(el=>el.addEventListener('click',()=>{
     S.sales=S.sales.filter(x=>x.id!==el.dataset.sdel);renderSalesList();renderOverview();renderProducts();save();
   }));
+}
+
+function bindCollapse(){
+  document.querySelectorAll('[data-collapse]').forEach(el=>{
+    if(el._bound)return; el._bound=true;
+    el.addEventListener('click',()=>{
+      const k=el.dataset.collapse; collapsed[k]=!collapsed[k];
+      if(k==='sales')renderSalesList(); else if(k==='expenses')renderExpenses(); else if(k==='archive')renderWeekly();
+    });
+  });
 }
 
 function renderProducts(){
@@ -207,34 +227,6 @@ function renderProducts(){
 }
 
 function isOverdue(tk){return tk.deadline&&tk.status!=="Готово"&&new Date(tk.deadline)<TODAY;}
-function taskDirOptions(sel){
-  return S.products.map(p=>`<option value="${esc(p.id)}" ${sel===p.id?'selected':''}>${esc(p.name)}</option>`).join('')
-    +`<option value="content" ${sel==="content"?'selected':''}>Контент</option><option value="general" ${sel==="general"?'selected':''}>Общее</option>`;
-}
-function renderTasks(){
-  const groups=[...S.products.map(p=>p.id),"content","general"];
-  document.getElementById('taskGroups').innerHTML=groups.map(g=>{
-    const items=S.tasks.map((tk,i)=>({tk,i})).filter(x=>x.tk.dir===g);
-    if(!items.length)return"";
-    const tag=prod(g)?prod(g).tag:g;
-    return `<div class="dirhead"><span class="tag" style="color:${dirTag(tag)}">${esc(dirLabel(g))}</span></div>`+items.map(({tk,i})=>{
-      const eff=isOverdue(tk)?"Просрочено":tk.status;
-      return `<div class="trow">
-        <div class="ttop"><input value="${esc(tk.title)}" placeholder="Задача" data-tt="${i}"><button class="del" data-tdel="${i}">×</button></div>
-        <div class="tmeta"><select data-tdir="${i}">${taskDirOptions(tk.dir)}</select><select data-tw="${i}">${whoOptions(tk.who)}</select></div>
-        <div class="tmeta2"><input type="date" value="${tk.deadline||''}" data-td="${i}">
-          <select data-ts="${i}" style="color:${eff==='Готово'?'var(--good)':eff==='Просрочено'?'var(--bad)':eff==='В работе'?'var(--accent)':'var(--mut)'}">${TSTATUS.map(s=>`<option ${tk.status===s?'selected':''}>${s}</option>`).join('')}</select>
-        </div></div>`;
-    }).join('');
-  }).join('')||`<div class="empty">Задач нет.</div>`;
-  document.querySelectorAll('[data-tt]').forEach(el=>el.addEventListener('input',()=>{S.tasks[+el.dataset.tt].title=el.value;save();}));
-  document.querySelectorAll('[data-tw]').forEach(el=>el.addEventListener('change',()=>{S.tasks[+el.dataset.tw].who=el.value;save();}));
-  document.querySelectorAll('[data-tdir]').forEach(el=>el.addEventListener('change',()=>{S.tasks[+el.dataset.tdir].dir=el.value;renderTasks();save();}));
-  document.querySelectorAll('[data-td]').forEach(el=>el.addEventListener('change',()=>{S.tasks[+el.dataset.td].deadline=el.value;renderTasks();save();}));
-  document.querySelectorAll('[data-ts]').forEach(el=>el.addEventListener('change',()=>{S.tasks[+el.dataset.ts].status=el.value;renderTasks();save();}));
-  document.querySelectorAll('[data-tdel]').forEach(el=>el.addEventListener('click',()=>{S.tasks.splice(+el.dataset.tdel,1);renderTasks();save();}));
-}
-
 function bestFormat(){let best=null;S.formats.forEach(f=>{if(f.name&&(+f.subs||0)>(best?+best.subs||0:-1))best=f;});return best;}
 function renderBestFormat(){
   const b=bestFormat(),el=document.getElementById('bestFormat');if(!el)return;
@@ -289,10 +281,17 @@ function updateExpenseTotals(){
 }
 function renderExpenses(){
   updateExpenseTotals();
-  document.getElementById('expenseRows').innerHTML=S.expenses.map((e,i)=>`
+  const wrap=document.getElementById('expenseRows');
+  const head=`<div class="collapse-head" data-collapse="expenses">
+    <span class="ct">Статьи расходов <span class="cn">${S.expenses.length}</span></span>
+    <span class="cc">${collapsed.expenses?'▼ показать':'▲ скрыть'}</span></div>`;
+  if(collapsed.expenses){ wrap.innerHTML=head; bindCollapse(); return; }
+  const rows=S.expenses.map((e,i)=>`
     <div class="exprow"><div class="exptop"><input value="${esc(e.item)}" placeholder="Статья расхода" data-ei="${i}"><button class="del" data-edel="${i}">×</button></div>
     <div class="expmeta"><select data-ec="${i}">${CATS.map(c=>`<option ${e.cat===c?'selected':''}>${c}</option>`).join('')}</select>
     <input class="num" type="number" min="0" placeholder="Сумма ₽" data-ea="${i}" value="${e.amount||''}"></div></div>`).join('');
+  wrap.innerHTML=head+rows;
+  bindCollapse();
   document.querySelectorAll('[data-ei]').forEach(el=>el.addEventListener('input',()=>{S.expenses[+el.dataset.ei].item=el.value;save();}));
   document.querySelectorAll('[data-ec]').forEach(el=>el.addEventListener('change',()=>{S.expenses[+el.dataset.ec].cat=el.value;updateExpenseTotals();save();}));
   document.querySelectorAll('[data-ea]').forEach(el=>el.addEventListener('input',()=>{S.expenses[+el.dataset.ea].amount=+el.value||0;updateExpenseTotals();renderOverview();save();}));
@@ -354,9 +353,16 @@ function renderWeekly(){
   bindWeekItemEvents();
   document.getElementById('addWeekItem').addEventListener('click',()=>{w.items.push(newWeekItem());renderWeekly();save();});
 
-  // Архив прошлых недель — редактируемый
+  // Архив прошлых недель — свёрнут по умолчанию, внутри каждая неделя тоже раскрывается
   const history=[...S.weeklyFocus].filter(x=>x.weekStart!==w.weekStart).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
-  document.getElementById('weekHistory').innerHTML=history.length?history.map(h=>{
+  const archHead=`<div class="collapse-head" data-collapse="archive">
+    <span class="ct">Архив прошлых недель <span class="cn">${history.length}</span></span>
+    <span class="cc">${collapsed.archive?'▼ показать':'▲ скрыть'}</span></div>`;
+  if(collapsed.archive || !history.length){
+    document.getElementById('weekHistory').innerHTML=history.length?archHead:'<div class="empty">История появится после первой завершённой недели.</div>';
+    bindCollapse(); bindWeekItemEvents(); return;
+  }
+  document.getElementById('weekHistory').innerHTML=archHead+history.map(h=>{
     const havg=h.items.length?Math.round(h.items.reduce((a,it)=>a+(+it.progress||0),0)/h.items.length):0;
     const open=editedWeeks.has(h.weekStart);
     return `<div class="wkhist">
@@ -369,8 +375,9 @@ function renderWeekly(){
         : h.items.map(it=>`<div class="wkhistitem ${(+it.progress||0)>=100?'done':''}">${(+it.progress||0)>=100?'✓':(+it.progress||0)+'%'} ${esc(it.plan)||'—'}${it.fact?` <span style="color:var(--dim)">→ ${esc(it.fact)}</span>`:''}</div>`).join('')
       }
     </div>`;
-  }).join(''):'<div class="empty">История появится после первой завершённой недели.</div>';
+  }).join('');
 
+  bindCollapse();
   document.querySelectorAll('[data-wktoggle]').forEach(el=>el.addEventListener('click',()=>{
     const k=el.dataset.wktoggle; editedWeeks.has(k)?editedWeeks.delete(k):editedWeeks.add(k); renderWeekly();
   }));
@@ -433,7 +440,7 @@ function renderStatsChart(){
 }
 
 function renderAll(){
-  const steps=[buildSaleProducts,renderOverview,renderWeekly,renderTimeline,renderSalesList,renderProducts,renderTasks,renderContent,renderExpenses,renderStats];
+  const steps=[buildSaleProducts,renderOverview,renderWeekly,renderTimeline,renderSalesList,renderProducts,renderContent,renderExpenses,renderStats];
   steps.forEach(fn=>{try{fn();}catch(e){console.error('Ошибка в '+fn.name+':',e);}});
   const m=document.getElementById('lastMetaLine'); if(m) m.textContent=lastMeta?('последнее изменение: '+lastMeta):'';
 }

@@ -152,6 +152,11 @@
   .wkhistdate{font-family:"JetBrains Mono",Inter,monospace;font-size:11px;color:var(--mut);margin-bottom:7px}
   .wkhistitem{font-size:13px;color:var(--dim);padding:3px 0}
   .wkhistitem.done{color:var(--txt)}
+  .collapse-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:12px 14px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;user-select:none}
+  .collapse-head:active{border-color:var(--accent)}
+  .collapse-head .ct{font-size:14px;font-weight:500;color:var(--txt)}
+  .collapse-head .cc{font-size:12px;color:var(--mut)}
+  .collapse-head .cn{font-family:"JetBrains Mono",Inter,monospace;font-size:11px;color:var(--mut);margin-left:8px}
   .statsform .sf-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
   .statstbl{width:100%;border-collapse:collapse;font-size:13px}
   .statstbl th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);color:var(--mut);font-weight:500;white-space:nowrap}

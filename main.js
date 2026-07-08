@@ -17,9 +17,8 @@ document.getElementById('addSale').addEventListener('click',()=>{
 });
 document.getElementById('addProduct').addEventListener('click',()=>{
   S.products.push({id:"p"+uid(),name:"Новый продукт",tag:"general",price:0,status:"Подготовка",window:""});
-  buildSaleProducts();renderProducts();renderTasks();save();
+  buildSaleProducts();renderProducts();save();
 });
-document.getElementById('addTask').addEventListener('click',()=>{S.tasks.unshift({title:"",dir:"general",who:"",deadline:"",status:"Не начато"});renderTasks();save();});
 document.getElementById('addFormat').addEventListener('click',()=>{S.formats.push({name:"",made:0,reach:0,reposts:0,saves:0,verdict:"Тестируется"});renderContent();save();});
 document.getElementById('addExpense').addEventListener('click',()=>{S.expenses.push({item:"",cat:"Прочее",amount:0,date:""});renderExpenses();save();});
 document.getElementById('addStats').addEventListener('click',()=>{
