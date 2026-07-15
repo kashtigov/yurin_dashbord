@@ -157,6 +157,26 @@
   .collapse-head .ct{font-size:14px;font-weight:500;color:var(--txt)}
   .collapse-head .cc{font-size:12px;color:var(--mut)}
   .collapse-head .cn{font-family:"JetBrains Mono",Inter,monospace;font-size:11px;color:var(--mut);margin-left:8px}
+  .rcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+  .rsum{font-family:"JetBrains Mono",Inter,monospace;font-size:11px;color:var(--mut);margin-left:10px;font-weight:400}
+  .rsect{font-size:12px;font-weight:600;color:var(--accent);letter-spacing:.03em;text-transform:uppercase;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .rgrid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .rgrid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+  .rfield label{display:block;font-size:11px;color:var(--mut);margin-bottom:4px}
+  .rfield input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 9px;font-size:14px;box-sizing:border-box}
+  .rnote{font-size:12px;color:var(--mut);margin-top:8px}
+  .rtbl th{font-size:10px;padding:5px 4px}
+  .rtbl td{padding:4px}
+  .rtbl input.rsm{width:100%;min-width:52px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:6px 5px;font-size:12px;box-sizing:border-box}
+  .rtbl input.rnm{width:100%;min-width:88px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:6px 7px;font-size:12px;box-sizing:border-box}
+  .rdel{border:1px solid var(--line)!important;background:none;color:var(--dim);border-radius:8px;padding:7px 12px;font-size:12px;margin-top:16px;cursor:pointer;width:100%}
+  .rdel:active{border-color:var(--bad)!important;color:var(--bad)}
+  .fnwrap{margin-top:12px}
+  .fnrow{display:flex;align-items:center;gap:9px;padding:5px 0}
+  .fnlab{font-size:12px;color:var(--mut);min-width:132px;flex-shrink:0}
+  .fnbarwrap{flex:1;height:16px;background:var(--panel2);border-radius:4px;overflow:hidden}
+  .fnbar{height:100%;border-radius:4px}
+  .fnval{font-family:"JetBrains Mono",Inter,monospace;font-size:12px;color:var(--txt);min-width:62px;text-align:right}
   .statsform .sf-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
   .statstbl{width:100%;border-collapse:collapse;font-size:13px}
   .statstbl th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);color:var(--mut);font-weight:500;white-space:nowrap}

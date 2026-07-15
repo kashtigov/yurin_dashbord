@@ -9,14 +9,14 @@ const PHASES=[
   {s:"2026-07-07",e:"2026-07-10",n:"Подготовка к съёмке",t:"prep"},
   {s:"2026-07-07",e:"2026-07-14",n:"Финальная упаковка ЯДРА",t:"pack"},
   {s:"2026-07-14",e:"2026-07-14",n:"Съёмка",t:"shoot"},
-  {s:"2026-07-15",e:"2026-07-25",n:"Старт продаж ЯДРА",t:"sales"},
   {s:"2026-07-16",e:"2026-07-19",n:"Подготовка к съёмке",t:"prep"},
   {s:"2026-07-18",e:"2026-07-24",n:"СРМ",t:"crm"},
-  {s:"2026-07-23",e:"2026-07-23",n:"Съёмка",t:"shoot"},
+  {s:"2026-07-20",e:"2026-07-25",n:"Старт продаж ЯДРА",t:"sales"},
+  {s:"2026-07-21",e:"2026-07-21",n:"Съёмка",t:"shoot"},
   {s:"2026-07-25",e:"2026-08-04",n:"Финальная упаковка КЛУБА",t:"pack"},
   {s:"2026-07-25",e:"2026-07-28",n:"Подготовка к съёмке",t:"prep"},
   {s:"2026-07-27",e:"2026-08-04",n:"Прогрев к КЛУБУ",t:"warm"},
-  {s:"2026-08-01",e:"2026-08-01",n:"Съёмка",t:"shoot"},
+  {s:"2026-07-30",e:"2026-07-30",n:"Съёмка",t:"shoot"},
   {s:"2026-08-03",e:"2026-08-06",n:"Подготовка к съёмке",t:"prep"},
   {s:"2026-08-05",e:"2026-08-10",n:"Продажи клуба",t:"sales"},
   {s:"2026-08-11",e:"2026-08-11",n:"Съёмка",t:"shoot"},
@@ -439,8 +439,206 @@ function renderStatsChart(){
   el.innerHTML=`<div style="margin-bottom:8px">${legend}</div><svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible">${gridLines}${yLabels}${xLabels}${lines}${dots}</svg>`;
 }
 
+// ====== Отчёт по неделям ======
+let openReports=new Set();
+
+function newReport(){
+  const to=TODAY.toISOString().slice(0,10);
+  const f=new Date(TODAY); f.setDate(f.getDate()-6);
+  return {id:uid(), from:f.toISOString().slice(0,10), to,
+    igSubs:0,igUnsubs:0,igTotal:0,
+    pubCount:0,pubViews:0,pubReposts:0,pubCore:0,pubCode:0,
+    testCount:0,testViews:0,testReposts:0,testCore:0,testCode:0,
+    tgSubs:0,tgUnsubs:0,tgTotal:0,
+    reels:[],
+    fIg:0,fTg:0,fVk:0,fFirst:0,fSite:0,fInstall:0,fPaid:0,fRefused:0};
+}
+function newReelRow(){return {name:"",views:0,reach:0,reposts:0,subs:0,code:0};}
+function shareRate(rl){const r=+rl.reach||0; return r?((+rl.reposts||0)/r*100):0;}
+
+// Итоги IG/TG из отчёта автоматически попадают в график на главной
+function syncReportToStats(r){
+  if(!r.to) return;
+  const ig=+r.igTotal||0, tg=+r.tgTotal||0;
+  if(!ig&&!tg) return;
+  let e=S.statsHistory.find(x=>x.date===r.to);
+  if(!e){ e={date:r.to,instagram:0,telegram:0,vk:0,youtube:0}; S.statsHistory.push(e); }
+  if(ig) e.instagram=ig;
+  if(tg) e.telegram=tg;
+}
+
+function numF(rid,key,val,ph){return `<input class="num" type="number" min="0" data-rf="${rid}" data-rk="${key}" value="${val||''}" placeholder="${ph||'0'}">`;}
+function fieldBox(lab,inp){return `<div class="rfield"><label>${lab}</label>${inp}</div>`;}
+
+function reelsTableHTML(r){
+  const rows=r.reels.map((rl,i)=>({rl,i})).sort((a,b)=>shareRate(b.rl)-shareRate(a.rl));
+  if(!r.reels.length) return '<div class="empty" style="padding:14px">Роликов пока нет.</div>';
+  return `<div style="overflow-x:auto"><table class="statstbl rtbl">
+    <thead><tr><th>Ролик</th><th>Просм.</th><th>Охват</th><th>Репост</th><th>Подпис.</th><th>Доля<br>подел.</th><th>Код.<br>слово</th><th></th></tr></thead>
+    <tbody>${rows.map(({rl,i})=>{
+      const sh=shareRate(rl);
+      const col=sh>=2?'var(--good)':sh>=1?'var(--accent)':'var(--mut)';
+      return `<tr>
+        <td><input class="rnm" data-rr="${r.id}" data-rri="${i}" data-rrk="name" value="${esc(rl.name)}" placeholder="Название"></td>
+        <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="views" value="${rl.views||''}"></td>
+        <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="reach" value="${rl.reach||''}"></td>
+        <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="reposts" value="${rl.reposts||''}"></td>
+        <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="subs" value="${rl.subs||''}"></td>
+        <td><b data-rshare="${r.id}-${i}" style="color:${col};font-family:'JetBrains Mono',Inter,monospace;font-size:12px">${sh.toFixed(2)}%</b></td>
+        <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="code" value="${rl.code||''}"></td>
+        <td><button class="del" data-rrdel="${r.id}" data-rri="${i}">×</button></td>
+      </tr>`;}).join('')}</tbody></table></div>
+    <button class="addbtn" data-rradd="${r.id}">+ Добавить ролик</button>`;
+}
+
+function funnelHTML(r){
+  const leads=(+r.fIg||0)+(+r.fTg||0)+(+r.fVk||0);
+  const steps=[
+    {l:"Обращений всего",v:leads,base:null},
+    {l:"Первое сообщение (ответил)",v:+r.fFirst||0,base:leads},
+    {l:"Отправили сайт / цену",v:+r.fSite||0,base:+r.fFirst||0},
+    {l:"Оформляет рассрочку",v:+r.fInstall||0,base:+r.fSite||0},
+    {l:"Полная оплата",v:+r.fPaid||0,base:+r.fSite||0},
+    {l:"Отказ",v:+r.fRefused||0,base:+r.fSite||0,bad:true}
+  ];
+  const maxV=Math.max(...steps.map(s=>s.v),1);
+  return steps.map(s=>{
+    const pct=s.base?(s.v/s.base*100):null;
+    const w=Math.max(2,s.v/maxV*100);
+    return `<div class="fnrow">
+      <div class="fnlab">${s.l}</div>
+      <div class="fnbarwrap"><div class="fnbar" style="width:${w.toFixed(1)}%;background:${s.bad?'var(--bad)':'var(--good)'};opacity:${s.bad?0.55:0.8}"></div></div>
+      <div class="fnval">${RUB(s.v)}${pct!==null?` <span style="color:var(--mut);font-size:11px">${pct.toFixed(0)}%</span>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderReports(){
+  const wrap=document.getElementById('reportList'); if(!wrap)return;
+  const list=[...S.reports].sort((a,b)=>(b.to||'').localeCompare(a.to||''));
+  if(!list.length){ wrap.innerHTML='<div class="empty">Отчётов пока нет. Нажми «+ Новый отчёт за период».</div>'; bindReportAdd(); return; }
+
+  wrap.innerHTML=list.map(r=>{
+    const open=openReports.has(r.id);
+    const growth=(+r.igSubs||0)-(+r.igUnsubs||0);
+    const views=(+r.pubViews||0)+(+r.testViews||0);
+    const paid=(+r.fPaid||0)+(+r.fInstall||0);
+    const per=`${(r.from||'?').slice(5).split('-').reverse().join('.')} – ${(r.to||'?').slice(5).split('-').reverse().join('.')}`;
+    const headSum=`<span class="rsum">IG ${RUB(r.igTotal)} <b style="color:${growth>=0?'var(--good)':'var(--bad)'}">${growth>=0?'+':''}${RUB(growth)}</b></span>
+      <span class="rsum">просмотров ${RUB(views)}</span><span class="rsum">оплат ${RUB(paid)}</span>`;
+    if(!open) return `<div class="rcard">
+      <div class="collapse-head" data-ropen="${r.id}" style="margin-bottom:0">
+        <span class="ct">${per} ${headSum}</span><span class="cc">▼ открыть</span></div></div>`;
+
+    return `<div class="rcard">
+      <div class="collapse-head" data-ropen="${r.id}" style="margin-bottom:12px">
+        <span class="ct">${per} ${headSum}</span><span class="cc">▲ свернуть</span></div>
+
+      <div class="rgrid2" style="margin-bottom:14px">
+        ${fieldBox('Период с',`<input type="date" data-rf="${r.id}" data-rk="from" value="${r.from||''}">`)}
+        ${fieldBox('по',`<input type="date" data-rf="${r.id}" data-rk="to" value="${r.to||''}">`)}
+      </div>
+
+      <div class="rsect">Подписчики Instagram</div>
+      <div class="rgrid3">
+        ${fieldBox('Подписки',numF(r.id,'igSubs',r.igSubs))}
+        ${fieldBox('Отписки',numF(r.id,'igUnsubs',r.igUnsubs))}
+        ${fieldBox('Итого',numF(r.id,'igTotal',r.igTotal))}
+      </div>
+      <div class="rnote">Прирост за период: <b style="color:${growth>=0?'var(--good)':'var(--bad)'}">${growth>=0?'+':''}${RUB(growth)}</b></div>
+
+      <div class="rsect">Reels — общий доступ</div>
+      <div class="rgrid3">
+        ${fieldBox('Кол-во роликов',numF(r.id,'pubCount',r.pubCount))}
+        ${fieldBox('Просмотры',numF(r.id,'pubViews',r.pubViews))}
+        ${fieldBox('Репосты',numF(r.id,'pubReposts',r.pubReposts))}
+        ${fieldBox('Запросы «Ядро»',numF(r.id,'pubCore',r.pubCore))}
+        ${fieldBox('Кодовое слово',numF(r.id,'pubCode',r.pubCode))}
+      </div>
+
+      <div class="rsect">Reels — пробный режим</div>
+      <div class="rgrid3">
+        ${fieldBox('Кол-во роликов',numF(r.id,'testCount',r.testCount))}
+        ${fieldBox('Просмотры',numF(r.id,'testViews',r.testViews))}
+        ${fieldBox('Репосты',numF(r.id,'testReposts',r.testReposts))}
+        ${fieldBox('Запросы «Ядро»',numF(r.id,'testCore',r.testCore))}
+        ${fieldBox('Кодовое слово',numF(r.id,'testCode',r.testCode))}
+      </div>
+
+      <div class="rsect">Telegram</div>
+      <div class="rgrid3">
+        ${fieldBox('Новые подписчики',numF(r.id,'tgSubs',r.tgSubs))}
+        ${fieldBox('Отписки',numF(r.id,'tgUnsubs',r.tgUnsubs))}
+        ${fieldBox('Всего',numF(r.id,'tgTotal',r.tgTotal))}
+      </div>
+
+      <div class="rsect">Разбор по роликам <span style="font-weight:400;color:var(--dim);font-size:11px">· доля поделившихся = репосты ÷ охват</span></div>
+      ${reelsTableHTML(r)}
+
+      <div class="rsect">Воронка курса ЯДРО (продажи в переписке)</div>
+      <div class="rgrid3">
+        ${fieldBox('Обращений: Instagram',numF(r.id,'fIg',r.fIg))}
+        ${fieldBox('Обращений: Telegram',numF(r.id,'fTg',r.fTg))}
+        ${fieldBox('Обращений: ВК',numF(r.id,'fVk',r.fVk))}
+        ${fieldBox('Первое сообщение',numF(r.id,'fFirst',r.fFirst))}
+        ${fieldBox('Отправили сайт / цену',numF(r.id,'fSite',r.fSite))}
+        ${fieldBox('Оформляет рассрочку',numF(r.id,'fInstall',r.fInstall))}
+        ${fieldBox('Полная оплата',numF(r.id,'fPaid',r.fPaid))}
+        ${fieldBox('Отказ',numF(r.id,'fRefused',r.fRefused))}
+      </div>
+      <div class="fnwrap">${funnelHTML(r)}</div>
+      <div class="rnote">% — конверсия из предыдущего шага воронки.</div>
+
+      <button class="del rdel" data-rdel="${r.id}">Удалить отчёт</button>
+    </div>`;
+  }).join('');
+
+  bindReportAdd();
+  document.querySelectorAll('[data-ropen]').forEach(el=>el.addEventListener('click',()=>{
+    const k=el.dataset.ropen; openReports.has(k)?openReports.delete(k):openReports.add(k); renderReports();
+  }));
+  document.querySelectorAll('[data-rf]').forEach(el=>el.addEventListener('input',()=>{
+    const r=S.reports.find(x=>x.id===el.dataset.rf); if(!r)return;
+    const k=el.dataset.rk;
+    r[k]=el.type==='number'?(+el.value||0):el.value;
+    if(k==='igTotal'||k==='tgTotal'||k==='to'){ syncReportToStats(r); renderStats(); }
+    save();
+  }));
+  document.querySelectorAll('[data-rr]').forEach(el=>el.addEventListener('input',()=>{
+    const r=S.reports.find(x=>x.id===el.dataset.rr); if(!r)return;
+    const i=+el.dataset.rri,k=el.dataset.rrk;
+    if(!r.reels[i])return;
+    r.reels[i][k]= k==='name'?el.value:(+el.value||0);
+    if(k==='reposts'||k==='reach'){
+      const cell=document.querySelector(`[data-rshare="${r.id}-${i}"]`);
+      if(cell){const sh=shareRate(r.reels[i]);cell.textContent=sh.toFixed(2)+'%';
+        cell.style.color=sh>=2?'var(--good)':sh>=1?'var(--accent)':'var(--mut)';}
+    }
+    save();
+  }));
+  document.querySelectorAll('[data-rradd]').forEach(el=>el.addEventListener('click',()=>{
+    const r=S.reports.find(x=>x.id===el.dataset.rradd); if(!r)return;
+    r.reels.push(newReelRow()); renderReports(); save();
+  }));
+  document.querySelectorAll('[data-rrdel]').forEach(el=>el.addEventListener('click',()=>{
+    const r=S.reports.find(x=>x.id===el.dataset.rrdel); if(!r)return;
+    r.reels.splice(+el.dataset.rri,1); renderReports(); save();
+  }));
+  document.querySelectorAll('[data-rdel]').forEach(el=>el.addEventListener('click',()=>{
+    if(!confirm('Удалить отчёт целиком? Данные периода пропадут.'))return;
+    S.reports=S.reports.filter(x=>x.id!==el.dataset.rdel); renderReports(); save();
+  }));
+}
+
+function bindReportAdd(){
+  const b=document.getElementById('addReport'); if(!b||b._bound)return; b._bound=true;
+  b.addEventListener('click',()=>{
+    const r=newReport(); S.reports.push(r); openReports.add(r.id); renderReports(); save();
+  });
+}
+
 function renderAll(){
-  const steps=[buildSaleProducts,renderOverview,renderWeekly,renderTimeline,renderSalesList,renderProducts,renderContent,renderExpenses,renderStats];
+  const steps=[buildSaleProducts,renderOverview,renderWeekly,renderTimeline,renderSalesList,renderProducts,renderContent,renderExpenses,renderStats,renderReports];
   steps.forEach(fn=>{try{fn();}catch(e){console.error('Ошибка в '+fn.name+':',e);}});
   const m=document.getElementById('lastMetaLine'); if(m) m.textContent=lastMeta?('последнее изменение: '+lastMeta):'';
 }

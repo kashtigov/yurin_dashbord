@@ -34,6 +34,7 @@
     <button class="tab" data-t="content">Контент</button>
     <button class="tab" data-t="expenses">Расходы</button>
     <button class="tab" data-t="stats">Статистика</button>
+    <button class="tab" data-t="reports">Отчёт</button>
     <button class="tab" data-t="timeline">Таймлайн</button>
   </nav>
 </header>
@@ -142,6 +143,13 @@
     </div>
     <div id="expenseRows"></div>
     <button class="addbtn" id="addExpense">+ Добавить расход</button>
+  </section>
+
+  <section id="reports">
+    <div class="secttitle">Отчёт по неделям</div>
+    <div class="hint">Заполняется раз в 1–2 недели. Итоги по Instagram и Telegram сами уходят в график на главной — дублировать во вкладке «Статистика» не нужно. Таблица роликов сортируется по доле поделившихся при открытии отчёта.</div>
+    <button class="addbtn" id="addReport">+ Новый отчёт за период</button>
+    <div id="reportList"></div>
   </section>
 
   <section id="timeline">

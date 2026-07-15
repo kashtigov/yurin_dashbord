@@ -63,7 +63,8 @@ function defaultState(){
     ],
     formats:[{name:"",made:0,reach:0,repostPct:0,subs:0,verdict:"Тестируется"}],
     expenses:[{item:"",cat:"Трафик/реклама",amount:0,date:""}],
-    statsHistory:[]
+    statsHistory:[],
+    reports:[]
   };
 }
 const TSTATUS=["Не начато","В работе","Готово","Просрочено"];
@@ -105,6 +106,8 @@ function migrate(){
     });
   });
   if(!Array.isArray(S.statsHistory)) S.statsHistory=[];
+  if(!Array.isArray(S.reports)) S.reports=[];
+  S.reports.forEach(r=>{ if(!Array.isArray(r.reels)) r.reels=[]; });
 }
 
 // ====== Расчётные функции над S ======
