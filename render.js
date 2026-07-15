@@ -343,40 +343,48 @@ function weekItemHTML(it,i,wKey){
   </div>`;
 }
 
+// Защита от двойной привязки: один обработчик на элемент+событие, повторный вызов игнорируется
+function on(el,ev,fn){
+  if(!el) return;
+  el._b=el._b||{};
+  if(el._b[ev]) return;
+  el._b[ev]=1;
+  el.addEventListener(ev,fn);
+}
 function subRef(key){
   const [wk,i]=key.split('|');
   const w=S.weeklyFocus.find(x=>x.weekStart===wk);
   return w&&w.items[+i]?w.items[+i]:null;
 }
 function bindWeekItemEvents(){
-  document.querySelectorAll('[data-wkfield]').forEach(el=>el.addEventListener('input',()=>{
+  document.querySelectorAll('[data-wkfield]').forEach(el=>on(el,'input',()=>{
     const w=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wk); if(!w)return;
     w.items[+el.dataset.wki][el.dataset.wkfield]=el.value; save();
   }));
-  document.querySelectorAll('[data-wkprog]').forEach(el=>el.addEventListener('input',()=>{
+  document.querySelectorAll('[data-wkprog]').forEach(el=>on(el,'input',()=>{
     const w=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wk); if(!w)return;
     w.items[+el.dataset.wkprog].progress=+el.value; renderWeekly(); save();
   }));
-  document.querySelectorAll('[data-wkdel]').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('[data-wkdel]').forEach(el=>on(el,'click',()=>{
     const w=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wk); if(!w)return;
     w.items.splice(+el.dataset.wkdel,1); renderWeekly(); save();
   }));
-  document.querySelectorAll('[data-subtoggle]').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('[data-subtoggle]').forEach(el=>on(el,'click',()=>{
     const k=el.dataset.subtoggle; openSubs.has(k)?openSubs.delete(k):openSubs.add(k); renderWeekly();
   }));
-  document.querySelectorAll('[data-subadd]').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('[data-subadd]').forEach(el=>on(el,'click',()=>{
     const it=subRef(el.dataset.subadd); if(!it)return;
     it.subs.push({text:"",done:false}); renderWeekly(); save();
   }));
-  document.querySelectorAll('[data-subdone]').forEach(el=>el.addEventListener('change',()=>{
+  document.querySelectorAll('[data-subdone]').forEach(el=>on(el,'change',()=>{
     const it=subRef(el.dataset.subdone); if(!it)return;
     it.subs[+el.dataset.subi].done=el.checked; renderWeekly(); save();
   }));
-  document.querySelectorAll('[data-subtext]').forEach(el=>el.addEventListener('input',()=>{
+  document.querySelectorAll('[data-subtext]').forEach(el=>on(el,'input',()=>{
     const it=subRef(el.dataset.subtext); if(!it)return;
     it.subs[+el.dataset.subi].text=el.value; save();
   }));
-  document.querySelectorAll('[data-subdel]').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('[data-subdel]').forEach(el=>on(el,'click',()=>{
     const it=subRef(el.dataset.subdel); if(!it)return;
     it.subs.splice(+el.dataset.subi,1); renderWeekly(); save();
   }));
@@ -390,19 +398,12 @@ function renderWeekly(){
     w.items.map((it,i)=>weekItemHTML(it,i,w.weekStart)).join('')+
     `<button class="addbtn" id="addWeekItem">+ Добавить задачу недели</button>
      <div class="wkavg">Средний прогресс недели: <b style="color:${progColor(avg)}">${avg}%</b></div>`;
-  bindWeekItemEvents();
-  document.getElementById('addWeekItem').addEventListener('click',()=>{w.items.push(newWeekItem());renderWeekly();save();});
-
   // Архив прошлых недель — свёрнут по умолчанию, внутри каждая неделя тоже раскрывается
   const history=[...S.weeklyFocus].filter(x=>x.weekStart!==w.weekStart).sort((a,b)=>b.weekStart.localeCompare(a.weekStart));
   const archHead=`<div class="collapse-head" data-collapse="archive">
     <span class="ct">Архив прошлых недель <span class="cn">${history.length}</span></span>
     <span class="cc">${collapsed.archive?'▼ показать':'▲ скрыть'}</span></div>`;
-  if(collapsed.archive || !history.length){
-    document.getElementById('weekHistory').innerHTML=history.length?archHead:'<div class="empty">История появится после первой завершённой недели.</div>';
-    bindCollapse(); bindWeekItemEvents(); return;
-  }
-  document.getElementById('weekHistory').innerHTML=archHead+history.map(h=>{
+  const archBody=(collapsed.archive||!history.length)?'':history.map(h=>{
     const havg=h.items.length?Math.round(h.items.reduce((a,it)=>a+(+it.progress||0),0)/h.items.length):0;
     const open=editedWeeks.has(h.weekStart);
     return `<div class="wkhist">
@@ -416,16 +417,19 @@ function renderWeekly(){
       }
     </div>`;
   }).join('');
+  document.getElementById('weekHistory').innerHTML=history.length?archHead+archBody:'<div class="empty">История появится после первой завершённой недели.</div>';
 
+  // Обработчики вешаются ОДИН раз — только когда вся разметка уже на месте
   bindCollapse();
-  document.querySelectorAll('[data-wktoggle]').forEach(el=>el.addEventListener('click',()=>{
+  bindWeekItemEvents();
+  on(document.getElementById('addWeekItem'),'click',()=>{w.items.push(newWeekItem());renderWeekly();save();});
+  document.querySelectorAll('[data-wktoggle]').forEach(el=>on(el,'click',()=>{
     const k=el.dataset.wktoggle; editedWeeks.has(k)?editedWeeks.delete(k):editedWeeks.add(k); renderWeekly();
   }));
-  document.querySelectorAll('[data-wkadd]').forEach(el=>el.addEventListener('click',()=>{
+  document.querySelectorAll('[data-wkadd]').forEach(el=>on(el,'click',()=>{
     const w2=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wkadd); if(!w2)return;
     w2.items.push(newWeekItem()); renderWeekly(); save();
   }));
-  bindWeekItemEvents();
 }
 let editedWeeks=new Set();
 
