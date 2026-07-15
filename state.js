@@ -64,7 +64,8 @@ function defaultState(){
     formats:[{name:"",made:0,reach:0,repostPct:0,subs:0,verdict:"Тестируется"}],
     expenses:[{item:"",cat:"Трафик/реклама",amount:0,date:""}],
     statsHistory:[],
-    reports:[]
+    reports:[],
+    hypotheses:[]
   };
 }
 const TSTATUS=["Не начато","В работе","Готово","Просрочено"];
@@ -102,12 +103,29 @@ function migrate(){
       if(it.plan===undefined) it.plan=it.text||'';
       if(it.fact===undefined) it.fact='';
       if(it.progress===undefined) it.progress=it.done?100:0;
+      if(!Array.isArray(it.subs)) it.subs=[];
       delete it.text; delete it.done;
     });
   });
   if(!Array.isArray(S.statsHistory)) S.statsHistory=[];
   if(!Array.isArray(S.reports)) S.reports=[];
-  S.reports.forEach(r=>{ if(!Array.isArray(r.reels)) r.reels=[]; });
+  S.reports.forEach(r=>{
+    if(!Array.isArray(r.reels)) r.reels=[];
+    if(r.pubSubs===undefined) r.pubSubs=0;
+    if(r.testSubs===undefined) r.testSubs=0;
+    // Воронка была общей — разносим по каналам. Старые цифры уходят в Instagram.
+    if(!r.fn){
+      r.fn={
+        ig:{leads:+r.fIg||0,first:+r.fFirst||0,site:+r.fSite||0,install:+r.fInstall||0,paid:+r.fPaid||0,refused:+r.fRefused||0},
+        tg:{leads:+r.fTg||0,first:0,site:0,install:0,paid:0,refused:0},
+        vk:{leads:+r.fVk||0,first:0,site:0,install:0,paid:0,refused:0}
+      };
+      delete r.fIg;delete r.fTg;delete r.fVk;delete r.fFirst;delete r.fSite;delete r.fInstall;delete r.fPaid;delete r.fRefused;
+    }
+    ['ig','tg','vk'].forEach(c=>{ if(!r.fn[c]) r.fn[c]={leads:0,first:0,site:0,install:0,paid:0,refused:0}; });
+  });
+  if(!Array.isArray(S.hypotheses)) S.hypotheses=[];
+  S.hypotheses.forEach(h=>{ if(!Array.isArray(h.checkpoints)) h.checkpoints=[]; });
 }
 
 // ====== Расчётные функции над S ======

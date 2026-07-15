@@ -305,7 +305,7 @@ function getOrCreateCurrentWeek(){
   if(!w){ w={weekStart:ws,items:[newWeekItem(),newWeekItem(),newWeekItem()]}; S.weeklyFocus.push(w); }
   return w;
 }
-function newWeekItem(){return {plan:"",fact:"",progress:0};}
+function newWeekItem(){return {plan:"",fact:"",progress:0,subs:[]};}
 function weekRangeLabel(ws){
   const start=new Date(ws+'T00:00:00'); const end=new Date(start); end.setDate(end.getDate()+6);
   const f=d=>d.getDate()+' '+MN[d.getMonth()];
@@ -313,20 +313,41 @@ function weekRangeLabel(ws){
 }
 function progColor(p){return p>=100?'var(--good)':p>=50?'var(--accent)':'var(--warn)';}
 
+let openSubs=new Set();
 function weekItemHTML(it,i,wKey){
   const p=+it.progress||0;
+  const subs=it.subs||[];
+  const doneN=subs.filter(s=>s.done).length;
+  const key=wKey+'|'+i, open=openSubs.has(key);
+  const subsHTML=open?`
+    ${subs.map((s,si)=>`<div class="subrow">
+      <input type="checkbox" data-subdone="${key}" data-subi="${si}" ${s.done?'checked':''}>
+      <input class="subtext ${s.done?'sdone':''}" data-subtext="${key}" data-subi="${si}" value="${esc(s.text)}" placeholder="Подзадача">
+      <button class="del" data-subdel="${key}" data-subi="${si}">×</button>
+    </div>`).join('')}
+    <button class="addbtn subadd" data-subadd="${key}">+ Подзадача</button>`:'';
   return `<div class="wkitem">
     <div class="wkihead">
-      <span class="wknum">№${i+1}</span>
+      <span class="wknum">Цель ${i+1}</span>
       <span class="wkpct" style="color:${progColor(p)}">${p}%</span>
       <button class="del wkdel" data-wkdel="${i}" data-wk="${wKey}">×</button>
     </div>
-    <input class="wktext" data-wkfield="plan" data-wki="${i}" data-wk="${wKey}" value="${esc(it.plan)}" placeholder="План: что задумали сделать">
+    <input class="wktext" data-wkfield="plan" data-wki="${i}" data-wk="${wKey}" value="${esc(it.plan)}" placeholder="Цель недели">
     <input class="wktext wkfact" data-wkfield="fact" data-wki="${i}" data-wk="${wKey}" value="${esc(it.fact)}" placeholder="Факт: что реально вышло">
     <input class="wkrange" type="range" min="0" max="100" step="5" value="${p}" data-wkprog="${i}" data-wk="${wKey}" style="--c:${progColor(p)}">
+    <div class="subhead" data-subtoggle="${key}">
+      <span>Подзадачи${subs.length?` <b style="color:${doneN===subs.length?'var(--good)':'var(--mut)'}">${doneN}/${subs.length}</b>`:''}</span>
+      <span style="color:var(--mut)">${open?'▲':'▼'}</span>
+    </div>
+    ${subsHTML}
   </div>`;
 }
 
+function subRef(key){
+  const [wk,i]=key.split('|');
+  const w=S.weeklyFocus.find(x=>x.weekStart===wk);
+  return w&&w.items[+i]?w.items[+i]:null;
+}
 function bindWeekItemEvents(){
   document.querySelectorAll('[data-wkfield]').forEach(el=>el.addEventListener('input',()=>{
     const w=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wk); if(!w)return;
@@ -339,6 +360,25 @@ function bindWeekItemEvents(){
   document.querySelectorAll('[data-wkdel]').forEach(el=>el.addEventListener('click',()=>{
     const w=S.weeklyFocus.find(x=>x.weekStart===el.dataset.wk); if(!w)return;
     w.items.splice(+el.dataset.wkdel,1); renderWeekly(); save();
+  }));
+  document.querySelectorAll('[data-subtoggle]').forEach(el=>el.addEventListener('click',()=>{
+    const k=el.dataset.subtoggle; openSubs.has(k)?openSubs.delete(k):openSubs.add(k); renderWeekly();
+  }));
+  document.querySelectorAll('[data-subadd]').forEach(el=>el.addEventListener('click',()=>{
+    const it=subRef(el.dataset.subadd); if(!it)return;
+    it.subs.push({text:"",done:false}); renderWeekly(); save();
+  }));
+  document.querySelectorAll('[data-subdone]').forEach(el=>el.addEventListener('change',()=>{
+    const it=subRef(el.dataset.subdone); if(!it)return;
+    it.subs[+el.dataset.subi].done=el.checked; renderWeekly(); save();
+  }));
+  document.querySelectorAll('[data-subtext]').forEach(el=>el.addEventListener('input',()=>{
+    const it=subRef(el.dataset.subtext); if(!it)return;
+    it.subs[+el.dataset.subi].text=el.value; save();
+  }));
+  document.querySelectorAll('[data-subdel]').forEach(el=>el.addEventListener('click',()=>{
+    const it=subRef(el.dataset.subdel); if(!it)return;
+    it.subs.splice(+el.dataset.subi,1); renderWeekly(); save();
   }));
 }
 
@@ -447,11 +487,13 @@ function newReport(){
   const f=new Date(TODAY); f.setDate(f.getDate()-6);
   return {id:uid(), from:f.toISOString().slice(0,10), to,
     igSubs:0,igUnsubs:0,igTotal:0,
-    pubCount:0,pubViews:0,pubReposts:0,pubCore:0,pubCode:0,
-    testCount:0,testViews:0,testReposts:0,testCore:0,testCode:0,
+    pubCount:0,pubViews:0,pubReposts:0,pubSubs:0,pubCore:0,pubCode:0,
+    testCount:0,testViews:0,testReposts:0,testSubs:0,testCore:0,testCode:0,
     tgSubs:0,tgUnsubs:0,tgTotal:0,
     reels:[],
-    fIg:0,fTg:0,fVk:0,fFirst:0,fSite:0,fInstall:0,fPaid:0,fRefused:0};
+    fn:{ig:{leads:0,first:0,site:0,install:0,paid:0,refused:0},
+        tg:{leads:0,first:0,site:0,install:0,paid:0,refused:0},
+        vk:{leads:0,first:0,site:0,install:0,paid:0,refused:0}}};
 }
 function newReelRow(){return {name:"",views:0,reach:0,reposts:0,subs:0,code:0};}
 function shareRate(rl){const r=+rl.reach||0; return r?((+rl.reposts||0)/r*100):0;}
@@ -471,8 +513,9 @@ function numF(rid,key,val,ph){return `<input class="num" type="number" min="0" d
 function fieldBox(lab,inp){return `<div class="rfield"><label>${lab}</label>${inp}</div>`;}
 
 function reelsTableHTML(r){
+  const add=`<button class="addbtn" data-rradd="${r.id}">+ Добавить ролик</button>`;
+  if(!r.reels.length) return `<div class="empty" style="padding:10px 0">Роликов пока нет — добавь первый кнопкой ниже.</div>${add}`;
   const rows=r.reels.map((rl,i)=>({rl,i})).sort((a,b)=>shareRate(b.rl)-shareRate(a.rl));
-  if(!r.reels.length) return '<div class="empty" style="padding:14px">Роликов пока нет.</div>';
   return `<div style="overflow-x:auto"><table class="statstbl rtbl">
     <thead><tr><th>Ролик</th><th>Просм.</th><th>Охват</th><th>Репост</th><th>Подпис.</th><th>Доля<br>подел.</th><th>Код.<br>слово</th><th></th></tr></thead>
     <tbody>${rows.map(({rl,i})=>{
@@ -487,30 +530,61 @@ function reelsTableHTML(r){
         <td><b data-rshare="${r.id}-${i}" style="color:${col};font-family:'JetBrains Mono',Inter,monospace;font-size:12px">${sh.toFixed(2)}%</b></td>
         <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="code" value="${rl.code||''}"></td>
         <td><button class="del" data-rrdel="${r.id}" data-rri="${i}">×</button></td>
-      </tr>`;}).join('')}</tbody></table></div>
-    <button class="addbtn" data-rradd="${r.id}">+ Добавить ролик</button>`;
+      </tr>`;}).join('')}</tbody></table></div>${add}`;
 }
 
+// ====== Воронка ЯДРА по каналам ======
+const FN_CH=[{k:'ig',l:'Instagram'},{k:'tg',l:'Telegram'},{k:'vk',l:'ВК'}];
+const FN_STEPS=[
+  {k:'leads',l:'Обращений'},
+  {k:'first',l:'Первое сообщение'},
+  {k:'site',l:'Отправили сайт / цену'},
+  {k:'install',l:'Оформляет рассрочку'},
+  {k:'paid',l:'Полная оплата'},
+  {k:'refused',l:'Отказ',bad:true}
+];
+function fnTot(r,k){return FN_CH.reduce((a,c)=>a+(+r.fn[c.k][k]||0),0);}
+
 function funnelHTML(r){
-  const leads=(+r.fIg||0)+(+r.fTg||0)+(+r.fVk||0);
-  const steps=[
-    {l:"Обращений всего",v:leads,base:null},
-    {l:"Первое сообщение (ответил)",v:+r.fFirst||0,base:leads},
-    {l:"Отправили сайт / цену",v:+r.fSite||0,base:+r.fFirst||0},
-    {l:"Оформляет рассрочку",v:+r.fInstall||0,base:+r.fSite||0},
-    {l:"Полная оплата",v:+r.fPaid||0,base:+r.fSite||0},
-    {l:"Отказ",v:+r.fRefused||0,base:+r.fSite||0,bad:true}
-  ];
-  const maxV=Math.max(...steps.map(s=>s.v),1);
-  return steps.map(s=>{
-    const pct=s.base?(s.v/s.base*100):null;
-    const w=Math.max(2,s.v/maxV*100);
-    return `<div class="fnrow">
-      <div class="fnlab">${s.l}</div>
-      <div class="fnbarwrap"><div class="fnbar" style="width:${w.toFixed(1)}%;background:${s.bad?'var(--bad)':'var(--good)'};opacity:${s.bad?0.55:0.8}"></div></div>
-      <div class="fnval">${RUB(s.v)}${pct!==null?` <span style="color:var(--mut);font-size:11px">${pct.toFixed(0)}%</span>`:''}</div>
-    </div>`;
+  const tbl=`<div style="overflow-x:auto"><table class="statstbl fntbl">
+    <thead><tr><th>Этап</th>${FN_CH.map(c=>`<th>${c.l}</th>`).join('')}<th>Итого</th></tr></thead>
+    <tbody>${FN_STEPS.map(s=>`<tr>
+      <td class="fnst" style="${s.bad?'color:var(--bad)':''}">${s.l}</td>
+      ${FN_CH.map(c=>`<td><input class="num rsm" type="number" min="0" data-fn="${r.id}" data-fnc="${c.k}" data-fnk="${s.k}" value="${r.fn[c.k][s.k]||''}"></td>`).join('')}
+      <td><b data-fntot="${r.id}-${s.k}" style="font-family:'JetBrains Mono',Inter,monospace;font-size:12px;color:${s.bad?'var(--bad)':'var(--txt)'}">${RUB(fnTot(r,s.k))}</b></td>
+    </tr>`).join('')}</tbody></table></div>`;
+
+  // Конверсия в оплату по каждому каналу
+  const conv=FN_CH.map(c=>{
+    const f=r.fn[c.k], leads=+f.leads||0, pay=(+f.paid||0)+(+f.install||0);
+    const pct=leads?(pay/leads*100):0;
+    const col=pct>=15?'var(--good)':pct>=7?'var(--accent)':'var(--mut)';
+    return `<div class="cvcard"><div class="cvl">${c.l}</div>
+      <div class="cvv" style="color:${col}">${leads?pct.toFixed(1)+'%':'—'}</div>
+      <div class="cvs">${RUB(pay)} из ${RUB(leads)}</div></div>`;
   }).join('');
+  const tl=fnTot(r,'leads'), tp=fnTot(r,'paid')+fnTot(r,'install');
+  const tpct=tl?(tp/tl*100):0;
+  return tbl+`<div class="rnote" style="margin-top:12px">Конверсия обращения → оплата (рассрочка + полная):</div>
+    <div class="cvgrid">${conv}<div class="cvcard" style="border-color:var(--accent)">
+      <div class="cvl">Итого</div><div class="cvv" style="color:var(--accent)">${tl?tpct.toFixed(1)+'%':'—'}</div>
+      <div class="cvs">${RUB(tp)} из ${RUB(tl)}</div></div></div>`;
+}
+
+function subsSplitHTML(r){
+  const p=+r.pubSubs||0,t=+r.testSubs||0,tot=p+t;
+  if(!tot) return '';
+  const pp=p/tot*100, pv=+r.pubViews||0, tv=+r.testViews||0;
+  // Сколько подписчиков на 1000 просмотров — показывает, какой режим эффективнее
+  const pk=pv?(p/pv*1000):0, tk=tv?(t/tv*1000):0;
+  return `<div class="splitwrap">
+    <div class="splitbar"><div style="width:${pp.toFixed(1)}%;background:var(--accent)"></div><div style="width:${(100-pp).toFixed(1)}%;background:var(--purple)"></div></div>
+    <div class="splitleg">
+      <span><i style="background:var(--accent)"></i>Основные: <b>${RUB(p)}</b> (${pp.toFixed(0)}%)${pk?` · <span style="color:var(--dim)">${pk.toFixed(1)} на 1000 просм.</span>`:''}</span>
+      <span><i style="background:var(--purple)"></i>Пробные: <b>${RUB(t)}</b> (${(100-pp).toFixed(0)}%)${tk?` · <span style="color:var(--dim)">${tk.toFixed(1)} на 1000 просм.</span>`:''}</span>
+    </div>
+    <div class="rnote">Всего с Reels: <b>${RUB(tot)}</b>${pk&&tk?` · эффективнее <b style="color:${pk>=tk?'var(--accent)':'var(--purple)'}">${pk>=tk?'основные':'пробные'}</b> на подписчика`:''}</div>
+  </div>`;
 }
 
 function renderReports(){
@@ -522,7 +596,7 @@ function renderReports(){
     const open=openReports.has(r.id);
     const growth=(+r.igSubs||0)-(+r.igUnsubs||0);
     const views=(+r.pubViews||0)+(+r.testViews||0);
-    const paid=(+r.fPaid||0)+(+r.fInstall||0);
+    const paid=fnTot(r,'paid')+fnTot(r,'install');
     const per=`${(r.from||'?').slice(5).split('-').reverse().join('.')} – ${(r.to||'?').slice(5).split('-').reverse().join('.')}`;
     const headSum=`<span class="rsum">IG ${RUB(r.igTotal)} <b style="color:${growth>=0?'var(--good)':'var(--bad)'}">${growth>=0?'+':''}${RUB(growth)}</b></span>
       <span class="rsum">просмотров ${RUB(views)}</span><span class="rsum">оплат ${RUB(paid)}</span>`;
@@ -552,6 +626,7 @@ function renderReports(){
         ${fieldBox('Кол-во роликов',numF(r.id,'pubCount',r.pubCount))}
         ${fieldBox('Просмотры',numF(r.id,'pubViews',r.pubViews))}
         ${fieldBox('Репосты',numF(r.id,'pubReposts',r.pubReposts))}
+        ${fieldBox('Подписчиков принесли',numF(r.id,'pubSubs',r.pubSubs))}
         ${fieldBox('Запросы «Ядро»',numF(r.id,'pubCore',r.pubCore))}
         ${fieldBox('Кодовое слово',numF(r.id,'pubCode',r.pubCode))}
       </div>
@@ -561,9 +636,11 @@ function renderReports(){
         ${fieldBox('Кол-во роликов',numF(r.id,'testCount',r.testCount))}
         ${fieldBox('Просмотры',numF(r.id,'testViews',r.testViews))}
         ${fieldBox('Репосты',numF(r.id,'testReposts',r.testReposts))}
+        ${fieldBox('Подписчиков принесли',numF(r.id,'testSubs',r.testSubs))}
         ${fieldBox('Запросы «Ядро»',numF(r.id,'testCore',r.testCore))}
         ${fieldBox('Кодовое слово',numF(r.id,'testCode',r.testCode))}
       </div>
+      <div data-split="${r.id}">${subsSplitHTML(r)}</div>
 
       <div class="rsect">Telegram</div>
       <div class="rgrid3">
@@ -575,19 +652,8 @@ function renderReports(){
       <div class="rsect">Разбор по роликам <span style="font-weight:400;color:var(--dim);font-size:11px">· доля поделившихся = репосты ÷ охват</span></div>
       ${reelsTableHTML(r)}
 
-      <div class="rsect">Воронка курса ЯДРО (продажи в переписке)</div>
-      <div class="rgrid3">
-        ${fieldBox('Обращений: Instagram',numF(r.id,'fIg',r.fIg))}
-        ${fieldBox('Обращений: Telegram',numF(r.id,'fTg',r.fTg))}
-        ${fieldBox('Обращений: ВК',numF(r.id,'fVk',r.fVk))}
-        ${fieldBox('Первое сообщение',numF(r.id,'fFirst',r.fFirst))}
-        ${fieldBox('Отправили сайт / цену',numF(r.id,'fSite',r.fSite))}
-        ${fieldBox('Оформляет рассрочку',numF(r.id,'fInstall',r.fInstall))}
-        ${fieldBox('Полная оплата',numF(r.id,'fPaid',r.fPaid))}
-        ${fieldBox('Отказ',numF(r.id,'fRefused',r.fRefused))}
-      </div>
-      <div class="fnwrap">${funnelHTML(r)}</div>
-      <div class="rnote">% — конверсия из предыдущего шага воронки.</div>
+      <div class="rsect">Воронка курса ЯДРО · по каналам</div>
+      ${funnelHTML(r)}
 
       <button class="del rdel" data-rdel="${r.id}">Удалить отчёт</button>
     </div>`;
@@ -602,6 +668,10 @@ function renderReports(){
     const k=el.dataset.rk;
     r[k]=el.type==='number'?(+el.value||0):el.value;
     if(k==='igTotal'||k==='tgTotal'||k==='to'){ syncReportToStats(r); renderStats(); }
+    if(k==='pubSubs'||k==='testSubs'||k==='pubViews'||k==='testViews'){
+      const w=document.querySelector(`[data-split="${r.id}"]`);
+      if(w) w.innerHTML=subsSplitHTML(r);
+    }
     save();
   }));
   document.querySelectorAll('[data-rr]').forEach(el=>el.addEventListener('input',()=>{
@@ -614,6 +684,13 @@ function renderReports(){
       if(cell){const sh=shareRate(r.reels[i]);cell.textContent=sh.toFixed(2)+'%';
         cell.style.color=sh>=2?'var(--good)':sh>=1?'var(--accent)':'var(--mut)';}
     }
+    save();
+  }));
+  document.querySelectorAll('[data-fn]').forEach(el=>el.addEventListener('input',()=>{
+    const r=S.reports.find(x=>x.id===el.dataset.fn); if(!r)return;
+    r.fn[el.dataset.fnc][el.dataset.fnk]=+el.value||0;
+    const cell=document.querySelector(`[data-fntot="${r.id}-${el.dataset.fnk}"]`);
+    if(cell) cell.textContent=RUB(fnTot(r,el.dataset.fnk));
     save();
   }));
   document.querySelectorAll('[data-rradd]').forEach(el=>el.addEventListener('click',()=>{
@@ -630,6 +707,95 @@ function renderReports(){
   }));
 }
 
+// ====== Гипотезы в тесте ======
+function newHypo(){
+  return {id:uid(),name:"",desc:"",start:TODAY.toISOString().slice(0,10),end:"",score:0,checkpoints:[]};
+}
+function scoreColor(s){return s>=8?'var(--good)':s>=5?'var(--accent)':s>=1?'var(--bad)':'var(--dim)';}
+function hypoStatus(h){
+  const t=TODAY.toISOString().slice(0,10);
+  if(h.end&&h.end<t) return {l:'Тест завершён',c:'var(--mut)'};
+  if(h.start&&h.start>t) return {l:'Ещё не начат',c:'var(--dim)'};
+  if(h.end) {
+    const total=(new Date(h.end)-new Date(h.start))/86400000;
+    const gone=(TODAY-new Date(h.start))/86400000;
+    const left=Math.ceil(total-gone);
+    return {l:`Идёт тест · ${left>0?left+' дн. до итога':'итог сегодня'}`,c:'var(--accent)'};
+  }
+  return {l:'Идёт тест',c:'var(--accent)'};
+}
+
+function renderHypotheses(){
+  const wrap=document.getElementById('hypoList'); if(!wrap)return;
+  const b=document.getElementById('addHypo');
+  if(b&&!b._bound){b._bound=true;b.addEventListener('click',()=>{S.hypotheses.push(newHypo());renderHypotheses();save();});}
+
+  if(!S.hypotheses.length){ wrap.innerHTML='<div class="empty">Гипотез пока нет. Нажми «+ Новая гипотеза».</div>'; return; }
+
+  const sorted=[...S.hypotheses].map((h,i)=>({h,i})).sort((a,b)=>{
+    const t=TODAY.toISOString().slice(0,10);
+    const aDone=a.h.end&&a.h.end<t?1:0, bDone=b.h.end&&b.h.end<t?1:0;
+    return aDone-bDone || (a.h.start||'').localeCompare(b.h.start||'');
+  });
+
+  wrap.innerHTML=sorted.map(({h,i})=>{
+    const st=hypoStatus(h), sc=+h.score||0;
+    return `<div class="hcard" style="${st.l==='Тест завершён'?'opacity:.72':''}">
+      <div class="hhead">
+        <span class="hbadge" style="color:${st.c};border-color:${st.c}">${st.l}</span>
+        <button class="del" data-hdel="${i}">×</button>
+      </div>
+      <input class="hname" data-hf="${i}" data-hk="name" value="${esc(h.name)}" placeholder="Название гипотезы">
+      <textarea class="hdesc" data-hf="${i}" data-hk="desc" rows="2" placeholder="Что проверяем и почему — суть гипотезы">${esc(h.desc)}</textarea>
+      <div class="rgrid2">
+        ${fieldBox('Старт теста',`<input type="date" data-hf="${i}" data-hk="start" value="${h.start||''}">`)}
+        ${fieldBox('Итог (конец теста)',`<input type="date" data-hf="${i}" data-hk="end" value="${h.end||''}">`)}
+      </div>
+
+      <div class="hsub">Промежуточные срезы</div>
+      ${h.checkpoints.length?h.checkpoints.map((c,ci)=>`
+        <div class="cprow">
+          <input type="date" class="cpdate" data-hcp="${i}" data-hci="${ci}" data-hck="date" value="${c.date||''}">
+          <input class="cpnote" data-hcp="${i}" data-hci="${ci}" data-hck="note" value="${esc(c.note)}" placeholder="Что видим на этот момент">
+          <button class="del" data-hcpdel="${i}" data-hci="${ci}">×</button>
+        </div>`).join(''):'<div class="empty" style="padding:6px 0;font-size:12px">Срезов нет — добавь первый.</div>'}
+      <button class="addbtn" data-hcpadd="${i}">+ Промежуточный срез</button>
+
+      <div class="hsub">Эффективность гипотезы</div>
+      <div class="hscore">
+        <input class="wkrange" type="range" min="0" max="10" step="1" value="${sc}" data-hsc="${i}">
+        <b style="color:${scoreColor(sc)}">${sc?sc+' / 10':'—'}</b>
+      </div>
+      <div class="rnote">0 — ещё не оценили. 1–4 отклоняем, 5–7 доработать, 8–10 масштабируем.</div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('[data-hf]').forEach(el=>el.addEventListener('input',()=>{
+    const h=S.hypotheses[+el.dataset.hf]; if(!h)return;
+    h[el.dataset.hk]=el.value;
+    if(el.dataset.hk==='start'||el.dataset.hk==='end') renderHypotheses();
+    save();
+  }));
+  document.querySelectorAll('[data-hsc]').forEach(el=>el.addEventListener('input',()=>{
+    S.hypotheses[+el.dataset.hsc].score=+el.value; renderHypotheses(); save();
+  }));
+  document.querySelectorAll('[data-hcp]').forEach(el=>el.addEventListener('input',()=>{
+    const h=S.hypotheses[+el.dataset.hcp]; if(!h)return;
+    h.checkpoints[+el.dataset.hci][el.dataset.hck]=el.value; save();
+  }));
+  document.querySelectorAll('[data-hcpadd]').forEach(el=>el.addEventListener('click',()=>{
+    S.hypotheses[+el.dataset.hcpadd].checkpoints.push({date:TODAY.toISOString().slice(0,10),note:""});
+    renderHypotheses(); save();
+  }));
+  document.querySelectorAll('[data-hcpdel]').forEach(el=>el.addEventListener('click',()=>{
+    S.hypotheses[+el.dataset.hcpdel].checkpoints.splice(+el.dataset.hci,1); renderHypotheses(); save();
+  }));
+  document.querySelectorAll('[data-hdel]').forEach(el=>el.addEventListener('click',()=>{
+    if(!confirm('Удалить гипотезу?'))return;
+    S.hypotheses.splice(+el.dataset.hdel,1); renderHypotheses(); save();
+  }));
+}
+
 function bindReportAdd(){
   const b=document.getElementById('addReport'); if(!b||b._bound)return; b._bound=true;
   b.addEventListener('click',()=>{
@@ -638,7 +804,7 @@ function bindReportAdd(){
 }
 
 function renderAll(){
-  const steps=[buildSaleProducts,renderOverview,renderWeekly,renderTimeline,renderSalesList,renderProducts,renderContent,renderExpenses,renderStats,renderReports];
+  const steps=[buildSaleProducts,renderOverview,renderWeekly,renderTimeline,renderHypotheses,renderSalesList,renderProducts,renderContent,renderExpenses,renderStats,renderReports];
   steps.forEach(fn=>{try{fn();}catch(e){console.error('Ошибка в '+fn.name+':',e);}});
   const m=document.getElementById('lastMetaLine'); if(m) m.textContent=lastMeta?('последнее изменение: '+lastMeta):'';
 }
