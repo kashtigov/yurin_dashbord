@@ -111,6 +111,7 @@ function migrate(){
   if(!Array.isArray(S.reports)) S.reports=[];
   S.reports.forEach(r=>{
     if(!Array.isArray(r.reels)) r.reels=[];
+    r.reels.forEach(rl=>{ if(rl.link===undefined) rl.link=""; });
     if(r.pubSubs===undefined) r.pubSubs=0;
     if(r.testSubs===undefined) r.testSubs=0;
     // Воронка была общей — разносим по каналам. Старые цифры уходят в Instagram.

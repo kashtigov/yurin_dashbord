@@ -206,6 +206,24 @@
   .hscore{display:flex;align-items:center;gap:12px}
   .hscore .wkrange{flex:1}
   .hscore b{font-family:"JetBrains Mono",Inter,monospace;font-size:15px;min-width:52px;text-align:right}
+  .gcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+  .gcard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;cursor:pointer;transition:opacity .15s}
+  .gcard:active{border-color:var(--accent)}
+  .gcard.goff{opacity:.38}
+  .gcl{font-size:11px;color:var(--mut);display:flex;align-items:center;gap:6px;margin-bottom:3px}
+  .gcl i{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+  .gcv{font-family:"JetBrains Mono",Inter,monospace;font-size:21px;font-weight:600;color:var(--txt);line-height:1.15}
+  .gcd{font-family:"JetBrains Mono",Inter,monospace;font-size:12px;font-weight:600;margin-top:3px}
+  .gcd .gcp{color:var(--dim);font-weight:400;font-size:10px}
+  .gca{font-size:10px;margin-top:2px;opacity:.85}
+  .gtoggle{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px;margin-bottom:10px}
+  .gtb{background:none;border:none;color:var(--mut);border-radius:7px;padding:6px 15px;font-size:12.5px;cursor:pointer;font-family:Inter,sans-serif}
+  .gtb.on{background:var(--accent);color:#1a1205;font-weight:600}
+  .lnkcell{display:flex;align-items:center;gap:4px}
+  .rtbl input.rlk{width:100%;min-width:96px;background:var(--panel2);border:1px solid var(--line);color:var(--blue);border-radius:6px;padding:6px 7px;font-size:11px;box-sizing:border-box}
+  .lnkgo{flex-shrink:0;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--blue);text-decoration:none;font-size:13px}
+  .lnkgo.off{color:var(--dim);opacity:.45}
+  a.lnkgo:active{border-color:var(--blue)}
   .statsform .sf-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
   .statstbl{width:100%;border-collapse:collapse;font-size:13px}
   .statstbl th{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);color:var(--mut);font-weight:500;white-space:nowrap}

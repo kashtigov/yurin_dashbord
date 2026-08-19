@@ -23,13 +23,15 @@ const PHASES=[
   {s:"2026-08-13",e:"2026-08-16",n:"Подготовка к съёмке",t:"prep"},
   {s:"2026-08-15",e:"2026-08-24",n:"Финальная упаковка РАСПРОДАЖИ",t:"pack"},
   {s:"2026-08-19",e:"2026-08-24",n:"Прогрев к РАСПРОДАЖЕ",t:"warm"},
-  {s:"2026-08-20",e:"2026-08-20",n:"Съёмка",t:"shoot"},
   {s:"2026-08-22",e:"2026-08-25",n:"Подготовка к съёмке",t:"prep"},
+  {s:"2026-08-25",e:"2026-08-25",n:"Съёмка",t:"shoot"},
   {s:"2026-08-25",e:"2026-09-01",n:"РАСПРОДАЖА",t:"sales"},
-  {s:"2026-08-29",e:"2026-08-29",n:"Съёмка",t:"shoot"},
-  {s:"2026-09-02",e:"2026-09-12",n:"Финальная упаковка БК",t:"pack"},
-  {s:"2026-09-02",e:"2026-11-07",n:"Прогрев к БК",t:"warm"},
-  {s:"2026-09-10",e:"2026-11-07",n:"Старт продаж БК",t:"sales"},
+  {s:"2026-09-07",e:"2026-10-26",n:"Построение системы продаж ЯДРА",t:"sys"},
+  {s:"2026-09-07",e:"2026-09-15",n:"Воронка под pro-базу с лид-магнитом",t:"sysstep"},
+  {s:"2026-09-15",e:"2026-09-22",n:"Воронка с конвертером под душный и Ядро + основное видео лид-магнита",t:"sysstep"},
+  {s:"2026-09-23",e:"2026-10-07",n:"Сшивка воронок, активные продажи, трафик, диагностика конверсий",t:"sysstep"},
+  {s:"2026-10-08",e:"2026-10-19",n:"Воронка под ВК для Ядра",t:"sysstep"},
+  {s:"2026-10-20",e:"2026-10-26",n:"Оценка стабильности воронок, план на ноябрь",t:"sysstep"},
 ];
 const LANE_CFG=[
   {t:"sales",label:"💸 Продажи",  color:"#3ecf8e"},
@@ -37,6 +39,8 @@ const LANE_CFG=[
   {t:"pack", label:"🏁 Упаковка", color:"#5b9bd5"},
   {t:"prep", label:"⚡️ Съёмка", color:"#d4a24a"},
   {t:"crm",  label:"💻 СРМ",     color:"#c08ae8"},
+  {t:"sys",  label:"🏗 Система",  color:"#e0645f"},
+  {t:"sysstep",label:"⚙️ Этапы системы",color:"#e8918d"},
   {t:"shoot",label:"🎬 Даты съёмок",color:"#888"},
 ];
 
@@ -88,7 +92,7 @@ function renderTimeline(){
   const sorted=[...PHASES].sort((a,b)=>a.s.localeCompare(b.s));
   const fmtDate=d=>{const[,m,day]=d.split('-');return`${+day}.${+m}`;};
   const colOf=t=>LANE_CFG.find(l=>l.t===t)?.color||'var(--mut)';
-  const emojiOf=t=>({sales:'💸',warm:'🔥',pack:'🏁',prep:'⚡️',crm:'💻',shoot:'🎬'}[t]||'');
+  const emojiOf=t=>({sales:'💸',warm:'🔥',pack:'🏁',prep:'⚡️',crm:'💻',sys:'🏗',sysstep:'⚙️',shoot:'🎬'}[t]||'');
   document.getElementById('timelineList').innerHTML=sorted.map(p=>{
     const done=new Date(p.e+'T23:59:59')<TODAY;
     const now=new Date(p.s+'T00:00:00')<=TODAY&&TODAY<=new Date(p.e+'T23:59:59');
@@ -106,7 +110,7 @@ function renderPhases(){
   const active=PHASES.filter(p=>p.s<=todayStr&&todayStr<=p.e);
   const upcoming=PHASES.filter(p=>p.s>todayStr).slice(0,3);
   const colOf=t=>LANE_CFG.find(l=>l.t===t)?.color||'var(--accent)';
-  const emojiOf=t=>({sales:'💸',warm:'🔥',pack:'🏁',prep:'⚡️',crm:'💻',shoot:'🎬'}[t]||'');
+  const emojiOf=t=>({sales:'💸',warm:'🔥',pack:'🏁',prep:'⚡️',crm:'💻',sys:'🏗',sysstep:'⚙️',shoot:'🎬'}[t]||'');
   const fmtD=d=>{const[,m,day]=d.split('-');return`${+day}.${+m}`;};
   let html='';
   if(active.length) html+=active.map(p=>`<div class="phase now" style="border-color:${colOf(p.t)}">
@@ -436,7 +440,6 @@ let editedWeeks=new Set();
 function renderStats(){
   document.getElementById('statsDate').value=TODAY.toISOString().slice(0,10);
   const rows=[...S.statsHistory].sort((a,b)=>b.date.localeCompare(a.date));
-  const NETS=[{k:'instagram',label:'Instagram',color:'#e1306c'},{k:'telegram',label:'Telegram',color:'#2aabee'},{k:'vk',label:'ВКонтакте',color:'#4a76a8'},{k:'youtube',label:'YouTube',color:'#ff0000'}];
 
   document.getElementById('statsHistory').innerHTML=rows.length?`
     <table class="statstbl">
@@ -453,34 +456,130 @@ function renderStats(){
   renderStatsChart();
 }
 
+const NETS=[{k:'instagram',label:'Instagram',short:'IG',color:'#e1306c'},
+            {k:'telegram',label:'Telegram',short:'TG',color:'#2aabee'},
+            {k:'vk',label:'ВКонтакте',short:'VK',color:'#4a76a8'},
+            {k:'youtube',label:'YouTube',short:'YT',color:'#ff0000'}];
+let chartMode='total';           // 'total' — всего подписчиков, 'delta' — прирост за период
+let hiddenNets=new Set();        // сети, скрытые кликом по легенде
+
 function renderStatsChart(){
-  const el=document.getElementById('statsChartWrap');
+  const el=document.getElementById('statsChartWrap'); if(!el)return;
   const rows=[...S.statsHistory].sort((a,b)=>a.date.localeCompare(b.date));
-  if(rows.length<2){el.innerHTML='<div class="empty">Нужно минимум 2 замера для графика.</div>';return;}
-  const NETS=[{k:'instagram',label:'IG',color:'#e1306c'},{k:'telegram',label:'TG',color:'#2aabee'},{k:'vk',label:'VK',color:'#4a76a8'},{k:'youtube',label:'YT',color:'#ff0000'}];
-  const W=560,H=200,PL=48,PR=16,PT=12,PB=36;
-  const allVals=rows.flatMap(r=>NETS.map(n=>+r[n.k]||0)).filter(v=>v>0);
-  if(!allVals.length){el.innerHTML='<div class="empty">Все значения нули — добавь реальные цифры.</div>';return;}
-  const minV=Math.min(...allVals),maxV=Math.max(...allVals);
-  const pad=(maxV-minV)*0.1||maxV*0.1||1;
-  const lo=Math.max(0,minV-pad),hi=maxV+pad;
-  const cx=i=>(PL+(W-PL-PR)*i/(rows.length-1)).toFixed(1);
-  const cy=v=>(PT+(H-PT-PB)*(1-(v-lo)/(hi-lo))).toFixed(1);
-  const fmt=n=>n>=1000?(n/1000).toFixed(1)+'k':n;
-  const yTicks=4;
-  let gridLines='',yLabels='';
-  for(let i=0;i<=yTicks;i++){const v=lo+(hi-lo)*i/yTicks;const y=cy(v);gridLines+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`;yLabels+=`<text x="${PL-4}" y="${+y+4}" text-anchor="end" fill="var(--dim)" font-size="10">${fmt(Math.round(v))}</text>`;}
-  let xLabels='';
-  const step=Math.max(1,Math.floor(rows.length/5));
-  rows.forEach((r,i)=>{if(i%step===0||i===rows.length-1)xLabels+=`<text x="${cx(i)}" y="${H-PB+14}" text-anchor="middle" fill="var(--dim)" font-size="10">${r.date.slice(5)}</text>`;});
-  let lines='',dots='';
-  NETS.forEach(n=>{
-    const pts=rows.map((r,i)=>`${cx(i)},${cy(+r[n.k]||lo)}`).join(' ');
-    lines+=`<polyline points="${pts}" fill="none" stroke="${n.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
-    rows.forEach((r,i)=>{const v=+r[n.k]||0;if(v>0)dots+=`<circle cx="${cx(i)}" cy="${cy(v)}" r="3.5" fill="${n.color}"><title>${n.label}: ${v.toLocaleString('ru-RU')}\n${r.date}</title></circle>`;});
+  if(rows.length<2){el.innerHTML='<div class="empty">Нужно минимум 2 замера, чтобы построить динамику.</div>';return;}
+
+  // Показываем только те сети, где реально есть цифры
+  const live=NETS.filter(n=>rows.some(r=>(+r[n.k]||0)>0));
+  if(!live.length){el.innerHTML='<div class="empty">Все значения нули — внеси реальные цифры во вкладке «Статистика».</div>';return;}
+  const shown=live.filter(n=>!hiddenNets.has(n.k));
+
+  // ——— Карточки: текущее значение, прирост за последний период и за всё время
+  const cards=live.map(n=>{
+    const vals=rows.map(r=>+r[n.k]||0);
+    const cur=vals[vals.length-1], prev=vals[vals.length-2]||0;
+    const first=vals.find(v=>v>0)||0;
+    const dLast=cur-prev, dAll=cur-first;
+    const pct=first?(dAll/first*100):0;
+    const off=hiddenNets.has(n.k);
+    const arrow=d=>d>0?'▲':d<0?'▼':'•';
+    const cl=d=>d>0?'var(--good)':d<0?'var(--bad)':'var(--mut)';
+    return `<div class="gcard ${off?'goff':''}" data-netcard="${n.k}" title="Клик — скрыть/показать на графике">
+      <div class="gcl"><i style="background:${n.color}"></i>${n.label}</div>
+      <div class="gcv">${RUB(cur)}</div>
+      <div class="gcd" style="color:${cl(dLast)}">${arrow(dLast)} ${dLast>0?'+':''}${RUB(dLast)} <span class="gcp">за период</span></div>
+      <div class="gca" style="color:${cl(dAll)}">${dAll>0?'+':''}${RUB(dAll)} за всё время${first?` · ${pct>0?'+':''}${pct.toFixed(0)}%`:''}</div>
+    </div>`;
+  }).join('');
+
+  const toggle=`<div class="gtoggle">
+    <button class="gtb ${chartMode==='total'?'on':''}" data-cmode="total">Всего</button>
+    <button class="gtb ${chartMode==='delta'?'on':''}" data-cmode="delta">Прирост</button>
+  </div>`;
+
+  if(!shown.length){
+    el.innerHTML=`<div class="gcards">${cards}</div>${toggle}<div class="empty">Все сети скрыты — верни любую кликом по карточке.</div>`;
+    bindChartEvents(); return;
+  }
+
+  // ——— Данные под выбранный режим
+  const dataOf=n=>chartMode==='total'
+    ? rows.map(r=>+r[n.k]||0)
+    : rows.map((r,i)=>i===0?0:((+r[n.k]||0)-(+rows[i-1][n.k]||0)));
+  const series=shown.map(n=>({n,v:dataOf(n)}));
+  const pts=chartMode==='delta'?rows.slice(1):rows;
+  const sl=chartMode==='delta'?1:0;
+
+  const W=620,H=230,PL=52,PR=54,PT=16,PB=34;
+  const flat=series.flatMap(s=>s.v.slice(sl));
+  let lo=Math.min(...flat,0), hi=Math.max(...flat,1);
+  const pad=(hi-lo)*0.12||Math.abs(hi)*0.12||1;
+  hi+=pad; lo=chartMode==='total'?Math.max(0,lo-pad):lo-pad;
+  if(hi===lo)hi=lo+1;
+
+  const cx=i=>(PL+(W-PL-PR)*(pts.length>1?i/(pts.length-1):0.5));
+  const cy=v=>(PT+(H-PT-PB)*(1-(v-lo)/(hi-lo)));
+  const fmt=v=>{const a=Math.abs(v);return a>=1000?(v/1000).toFixed(a>=10000?0:1)+'k':Math.round(v);};
+
+  // Сетка + нулевая линия (в режиме прироста она важна: выше — рост, ниже — отток)
+  let grid='',yLab='';
+  for(let i=0;i<=4;i++){
+    const v=lo+(hi-lo)*i/4, y=cy(v).toFixed(1);
+    grid+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--line)" stroke-width="1" opacity=".55"/>`;
+    yLab+=`<text x="${PL-6}" y="${+y+4}" text-anchor="end" fill="var(--dim)" font-size="10" font-family="JetBrains Mono,monospace">${fmt(v)}</text>`;
+  }
+  let zero='';
+  if(lo<0&&hi>0){const zy=cy(0).toFixed(1);
+    zero=`<line x1="${PL}" y1="${zy}" x2="${W-PR}" y2="${zy}" stroke="var(--mut)" stroke-width="1.5" stroke-dasharray="3,3"/>`;}
+
+  let xLab='';
+  const st=Math.max(1,Math.ceil(pts.length/6));
+  pts.forEach((r,i)=>{ if(i%st===0||i===pts.length-1){
+    const[,m,d]=r.date.split('-');
+    xLab+=`<text x="${cx(i).toFixed(1)}" y="${H-PB+15}" text-anchor="middle" fill="var(--dim)" font-size="10">${+d}.${+m}</text>`;}});
+
+  // Линии, заливка, точки, подпись последнего значения
+  let areas='',lines='',dots='',endLab='',defs='';
+  series.forEach(({n,v},si)=>{
+    const vv=v.slice(sl);
+    const P=vv.map((x,i)=>[cx(i),cy(x)]);
+    const path=P.map(([x,y],i)=>`${i?'L':'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+    const base=cy(chartMode==='total'?lo:Math.max(lo,0)).toFixed(1);
+    defs+=`<linearGradient id="gr${si}" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="${n.color}" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="${n.color}" stop-opacity="0"/></linearGradient>`;
+    if(chartMode==='total'&&shown.length<=2)
+      areas+=`<path d="${path} L${P[P.length-1][0].toFixed(1)},${base} L${P[0][0].toFixed(1)},${base} Z" fill="url(#gr${si})"/>`;
+    lines+=`<path d="${path}" fill="none" stroke="${n.color}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+    P.forEach(([x,y],i)=>{
+      const val=vv[i];
+      dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i===P.length-1?4.5:3}" fill="${n.color}" stroke="var(--ink)" stroke-width="1.5">
+        <title>${n.label} · ${pts[i].date}\n${chartMode==='delta'?(val>0?'+':'')+RUB(val)+' за период':RUB(val)+' подписчиков'}</title></circle>`;
+    });
+    const [lx,ly]=P[P.length-1];
+    endLab+=`<text x="${(lx+8).toFixed(1)}" y="${(ly+4).toFixed(1)}" fill="${n.color}" font-size="11" font-weight="600" font-family="JetBrains Mono,monospace">${chartMode==='delta'&&vv[vv.length-1]>0?'+':''}${fmt(vv[vv.length-1])}</text>`;
   });
-  const legend=NETS.map(n=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:12px;color:var(--mut)"><span style="width:14px;height:3px;background:${n.color};display:inline-block;border-radius:2px"></span>${n.label}</span>`).join('');
-  el.innerHTML=`<div style="margin-bottom:8px">${legend}</div><svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible">${gridLines}${yLabels}${xLabels}${lines}${dots}</svg>`;
+
+  const hint=chartMode==='delta'
+    ? 'Прирост за каждый период. Ниже пунктира — отток больше, чем приход.'
+    : 'Общее число подписчиков. Переключи на «Прирост», чтобы увидеть динамику по неделям.';
+
+  el.innerHTML=`<div class="gcards">${cards}</div>${toggle}
+    <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:340px;display:block">
+      <defs>${defs}</defs>${grid}${zero}${yLab}${xLab}${areas}${lines}${dots}${endLab}
+    </svg></div>
+    <div class="rnote">${hint}</div>`;
+  bindChartEvents();
+}
+
+function bindChartEvents(){
+  document.querySelectorAll('[data-cmode]').forEach(el=>on(el,'click',()=>{
+    chartMode=el.dataset.cmode; renderStatsChart();
+  }));
+  document.querySelectorAll('[data-netcard]').forEach(el=>on(el,'click',()=>{
+    const k=el.dataset.netcard;
+    hiddenNets.has(k)?hiddenNets.delete(k):hiddenNets.add(k);
+    renderStatsChart();
+  }));
 }
 
 // ====== Отчёт по неделям ======
@@ -499,7 +598,7 @@ function newReport(){
         tg:{leads:0,first:0,site:0,install:0,paid:0,refused:0},
         vk:{leads:0,first:0,site:0,install:0,paid:0,refused:0}}};
 }
-function newReelRow(){return {name:"",views:0,reach:0,reposts:0,subs:0,code:0};}
+function newReelRow(){return {name:"",link:"",views:0,reach:0,reposts:0,subs:0,code:0};}
 function shareRate(rl){const r=+rl.reach||0; return r?((+rl.reposts||0)/r*100):0;}
 
 // Итоги IG/TG из отчёта автоматически попадают в график на главной
@@ -521,12 +620,18 @@ function reelsTableHTML(r){
   if(!r.reels.length) return `<div class="empty" style="padding:10px 0">Роликов пока нет — добавь первый кнопкой ниже.</div>${add}`;
   const rows=r.reels.map((rl,i)=>({rl,i})).sort((a,b)=>shareRate(b.rl)-shareRate(a.rl));
   return `<div style="overflow-x:auto"><table class="statstbl rtbl">
-    <thead><tr><th>Ролик</th><th>Просм.</th><th>Охват</th><th>Репост</th><th>Подпис.</th><th>Доля<br>подел.</th><th>Код.<br>слово</th><th></th></tr></thead>
+    <thead><tr><th>Ролик</th><th>Ссылка</th><th>Просм.</th><th>Охват</th><th>Репост</th><th>Подпис.</th><th>Доля<br>подел.</th><th>Код.<br>слово</th><th></th></tr></thead>
     <tbody>${rows.map(({rl,i})=>{
       const sh=shareRate(rl);
       const col=sh>=2?'var(--good)':sh>=1?'var(--accent)':'var(--mut)';
+      const url=(rl.link||'').trim();
+      const safe=/^https?:\/\//i.test(url)?url:'';
       return `<tr>
         <td><input class="rnm" data-rr="${r.id}" data-rri="${i}" data-rrk="name" value="${esc(rl.name)}" placeholder="Название"></td>
+        <td><div class="lnkcell">
+          <input class="rlk" data-rr="${r.id}" data-rri="${i}" data-rrk="link" value="${esc(url)}" placeholder="https://...">
+          ${safe?`<a class="lnkgo" href="${esc(safe)}" target="_blank" rel="noopener noreferrer" title="Открыть ролик">↗</a>`:'<span class="lnkgo off" title="Вставь ссылку, чтобы открыть">↗</span>'}
+        </div></td>
         <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="views" value="${rl.views||''}"></td>
         <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="reach" value="${rl.reach||''}"></td>
         <td><input class="num rsm" type="number" min="0" data-rr="${r.id}" data-rri="${i}" data-rrk="reposts" value="${rl.reposts||''}"></td>
@@ -682,7 +787,18 @@ function renderReports(){
     const r=S.reports.find(x=>x.id===el.dataset.rr); if(!r)return;
     const i=+el.dataset.rri,k=el.dataset.rrk;
     if(!r.reels[i])return;
-    r.reels[i][k]= k==='name'?el.value:(+el.value||0);
+    r.reels[i][k]= (k==='name'||k==='link')?el.value:(+el.value||0);
+    if(k==='link'){
+      const go=el.parentElement.querySelector('.lnkgo');
+      const u=el.value.trim(), ok=/^https?:\/\//i.test(u);
+      if(go){
+        const nx=document.createElement(ok?'a':'span');
+        nx.className='lnkgo'+(ok?'':' off'); nx.textContent='↗';
+        if(ok){nx.href=u;nx.target='_blank';nx.rel='noopener noreferrer';nx.title='Открыть ролик';}
+        else nx.title='Вставь ссылку, чтобы открыть';
+        go.replaceWith(nx);
+      }
+    }
     if(k==='reposts'||k==='reach'){
       const cell=document.querySelector(`[data-rshare="${r.id}-${i}"]`);
       if(cell){const sh=shareRate(r.reels[i]);cell.textContent=sh.toFixed(2)+'%';
